@@ -76,10 +76,13 @@ export function Beranda() {
       </section>
 
       <footer style={{ borderTop: '1px solid var(--line)', padding: '24px clamp(16px, 3vw, 32px) 40px' }}>
-        <div className="shell" style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: 'var(--muted-2)' }}>
-          <span>PyClass · Pemrograman Dasar (Python) · SMA Kelas X</span>
-          <span style={{ flex: 1 }} />
-          <Link to="/guru" style={{ color: 'var(--brand-deep)', fontWeight: 600 }}>Halaman Guru</Link>
+        {/* Tautan ke halaman guru sengaja tidak dipasang di sini — lihat catatan
+            pada NavBeranda di components/Header.tsx. */}
+        <div
+          className="shell"
+          style={{ fontSize: 13, color: 'var(--muted-2)', textAlign: 'center' }}
+        >
+          PyClass - M. Aziz Al Assad, S.T., Gr. | 2026
         </div>
       </footer>
     </div>

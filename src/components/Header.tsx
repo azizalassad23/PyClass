@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useRef, type ReactNode } from 'react';
 import { MODE_DEMO } from '../lib/api';
 import { usePython } from '../python/PythonProvider';
 
@@ -51,6 +51,26 @@ interface HeaderProps {
 }
 
 export function Header({ jejak, kanan, ringkas = false }: HeaderProps) {
+  const navigate = useNavigate();
+  const klik = useRef<number[]>([]);
+
+  /**
+   * Jalan pintas ke halaman guru: klik logo 5× dalam 3 detik. Rute #/guru tetap
+   * bisa diketik langsung — ini hanya supaya guru tidak perlu menghafal URL,
+   * tanpa memasang tautan yang terlihat murid.
+   */
+  const hitungKlikLogo = (e: React.MouseEvent) => {
+    const sekarang = Date.now();
+    klik.current = [...klik.current, sekarang].filter((t) => sekarang - t < 3000);
+    if (klik.current.length >= 5) {
+      klik.current = [];
+      // Tanpa preventDefault, navigasi bawaan Link ke "/" akan langsung
+      // menimpa perpindahan ke halaman guru.
+      e.preventDefault();
+      navigate('/guru');
+    }
+  };
+
   return (
     <header
       style={{
@@ -61,6 +81,7 @@ export function Header({ jejak, kanan, ringkas = false }: HeaderProps) {
     >
       <Link
         to="/"
+        onClick={hitungKlikLogo}
         style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'var(--ink)' }}
       >
         <Logo ukuran={ringkas ? 30 : 34} />
@@ -88,21 +109,20 @@ export function Header({ jejak, kanan, ringkas = false }: HeaderProps) {
   );
 }
 
-/** Tautan navigasi utama di beranda. */
+/**
+ * Tautan navigasi utama di beranda.
+ *
+ * Halaman guru SENGAJA tidak dicantumkan di sini maupun di footer, supaya murid
+ * tidak menemukannya begitu saja. Ini penghalang, bukan pengaman: rute #/guru
+ * tetap bisa diketik siapa saja. Yang benar-benar menjaganya adalah PIN yang
+ * diverifikasi Apps Script (F-G01) — tanpa PIN yang benar, membuka sesi,
+ * menutup sesi, dan membaca rekap semuanya ditolak server.
+ */
 export function NavBeranda() {
   return (
     <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <Link to="/materi" style={tautanNav}>Materi</Link>
       <Link to="/ujian" style={tautanNav}>Ujian</Link>
-      <Link
-        to="/guru"
-        style={{
-          ...tautanNav, color: 'var(--brand-deep)', border: '1px solid var(--brand-line)',
-          borderRadius: 'var(--r-pill)', background: 'var(--brand-wash)', padding: '8px 16px',
-        }}
-      >
-        Halaman Guru
-      </Link>
     </nav>
   );
 }

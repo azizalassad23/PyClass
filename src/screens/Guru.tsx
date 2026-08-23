@@ -68,10 +68,21 @@ export function Guru() {
     );
   }
 
-  return <PapanGuru pin={pin} />;
+  return (
+    <PapanGuru
+      pin={pin}
+      onKeluar={() => {
+        // PIN dibuang dari memori, bukan sekadar menyembunyikan papan — supaya
+        // meninggalkan perangkat di kelas tidak berarti meninggalkan sesi guru
+        // yang masih terbuka.
+        setPin('');
+        setMasuk(false);
+      }}
+    />
+  );
 }
 
-function PapanGuru({ pin }: { pin: string }) {
+function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
   const [kelas, setKelas] = useState<Kelas>(() => baca<Kelas>('guru:kelas', 'XA'));
   const [sesi, setSesi] = useState<SesiInfo | null>(null);
   const [rekap, setRekap] = useState<BarisRekap[]>([]);
@@ -135,7 +146,18 @@ function PapanGuru({ pin }: { pin: string }) {
 
   return (
     <div style={{ background: 'var(--cream)', minHeight: '100vh' }}>
-      <Header ringkas jejak="Halaman Guru" kanan={<span className="pill pill--quiet">Terkunci PIN</span>} />
+      <Header
+        ringkas
+        jejak="Halaman Guru"
+        kanan={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="pill pill--quiet">Terkunci PIN</span>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={onKeluar}>
+              Keluar
+            </button>
+          </div>
+        }
+      />
 
       <div className="guru">
         <nav className="guru__sisi" aria-label="Navigasi guru">
