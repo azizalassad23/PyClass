@@ -1,0 +1,137 @@
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 400; letter-spacing: -0.01em; }
+p { text-wrap: pretty; }
+code, kbd, samp, pre { font-family: var(--mono); }
+a { color: var(--brand-deep); }
+
+/* Aksesibilitas: fokus selalu terlihat (NFR §13 — seluruh alur dapat dilalui keyboard). */
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; left: 12px; top: -60px; z-index: 200;
+  background: var(--ink); color: var(--cream); padding: 12px 20px;
+  border-radius: var(--r-pill); font-weight: 600; text-decoration: none;
+  transition: top .15s;
+}
+.skip-link:focus { top: 12px; }
+
+/* ---------- Tombol ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--display); font-size: 15px; line-height: 1;
+  padding: 14px 26px; min-height: 44px;
+  border-radius: var(--r-pill); border: 1px solid transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background .15s, border-color .15s, transform .06s;
+}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn--primary { background: var(--brand); color: #fff; box-shadow: var(--shadow-sm); }
+.btn--primary:hover:not(:disabled) { background: var(--brand-hover); }
+.btn--ghost { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+.btn--ghost:hover:not(:disabled) { border-color: var(--muted-3); }
+.btn--dark { background: var(--ink); color: var(--cream); }
+.btn--dark:hover:not(:disabled) { background: var(--ink-chrome); }
+.btn--onDark { background: transparent; color: var(--cream); border-color: var(--muted); }
+.btn--onDark:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+.btn--sm { font-size: 13px; padding: 10px 18px; min-height: 40px; }
+.btn--block { width: 100%; }
+
+/* ---------- Pil / lencana ---------- */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: var(--r-pill); padding: 5px 12px;
+  font-size: 11.5px; font-weight: 700; line-height: 1.4;
+}
+.pill--brand { background: var(--brand-tint); color: var(--brand-deep); }
+.pill--leaf { background: var(--leaf-wash); color: var(--leaf-deep); }
+.pill--quiet { background: var(--cream); color: var(--muted-2); font-weight: 600; }
+
+.eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted-3);
+}
+
+/* ---------- Kartu ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); padding: 22px 24px;
+}
+
+/* ---------- Kolom halaman ---------- */
+.shell { max-width: 1280px; margin: 0 auto; }
+
+/* ---------- Isian formulir ---------- */
+.field { display: block; margin-bottom: 16px; }
+.field__label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--ink-chrome); }
+.field__hint { font-weight: 400; color: var(--muted-2); }
+.input, .select {
+  width: 100%; font-family: var(--sans); font-size: 15px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill); padding: 13px 20px; min-height: 48px;
+}
+.input--mono { font-family: var(--mono); }
+.input:focus, .select:focus { border-color: var(--brand); }
+.field__error { display: block; margin-top: 6px; font-size: 12.5px; color: var(--brand-deep); font-weight: 600; }
+.input[aria-invalid='true'] { border-color: var(--brand-deep); }
+
+/* ---------- Konten Markdown materi ---------- */
+.prose { font-size: 16.5px; line-height: 1.7; color: var(--body); }
+.prose > :first-child { margin-top: 0; }
+.prose h2 { font-size: 26px; margin: 32px 0 10px; color: var(--ink); }
+.prose h3 { font-size: 21px; margin: 26px 0 8px; color: var(--ink); }
+.prose p { margin: 0 0 16px; }
+.prose ul, .prose ol { margin: 0 0 18px; padding-left: 22px; }
+.prose li { margin-bottom: 6px; }
+.prose strong { font-weight: 700; color: var(--ink); }
+.prose code {
+  font-size: .88em; background: var(--line); color: var(--brand-deep);
+  padding: 1px 6px; border-radius: 6px;
+}
+.prose blockquote {
+  margin: 0 0 18px; background: var(--brand-wash); border-radius: var(--r-md);
+  padding: 16px 20px; font-size: 15px;
+}
+.prose blockquote p:last-child { margin-bottom: 0; }
+.prose table { width: 100%; border-collapse: collapse; margin: 0 0 18px; font-size: 15px; }
+.prose th, .prose td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.prose th { font-weight: 700; color: var(--ink); }
+
+/* ---------- Editor kode ---------- */
+.cm-editor { background: transparent; }
+.cm-editor .cm-scroller { font-family: var(--mono); line-height: 1.75; }
+.cm-editor .cm-gutters { background: transparent; border-right: 0; color: var(--muted); }
+.cm-editor .cm-activeLineGutter { background: transparent; color: var(--muted-4); }
+.cm-editor .cm-activeLine { background: rgba(255,255,255,.045); }
+.cm-editor .cm-content { caret-color: var(--brand-lit); padding: 14px 0; }
+.cm-editor.cm-focused { outline: none; }
+.cm-editor .cm-selectionBackground,
+.cm-editor .cm-content ::selection { background: rgba(198,113,57,.35) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}

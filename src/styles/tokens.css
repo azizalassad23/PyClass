@@ -1,0 +1,56 @@
+/* Design tokens — diambil langsung dari "PyClass Mockups.dc.html". */
+:root {
+  /* Latar & permukaan */
+  --cream: #f9f4ed;
+  --cream-deep: #efe7dc;
+  --surface: #fff;
+  --line: #eee7db;
+  --line-strong: #dcd3c4;
+
+  /* Tinta */
+  --ink: #201e1d;
+  --ink-code: #2e2b25;
+  --ink-chrome: #474238;
+  --body: #3f3a35;
+  --muted: #645c50;
+  --muted-2: #82796a;
+  --muted-3: #a19786;
+  --muted-4: #c0b6a5;
+
+  /* Aksen utama (oranye) */
+  --brand: #c67139;
+  --brand-deep: #8c491a;
+  --brand-hover: #b2622d;
+  --brand-tint: #ffe1d0;
+  --brand-wash: #fff2eb;
+  --brand-line: #ffc6a5;
+  --brand-lit: #f6a06b;
+
+  /* Aksen kedua (hijau) */
+  --leaf-wash: #f0fae1;
+  --leaf-line: #e1eecc;
+  --leaf: #aebf92;
+  --leaf-mid: #8fa073;
+  --leaf-deep: #56633f;
+  --leaf-ink: #3d472b;
+  --leaf-muted: #728157;
+  --leaf-dark: #272e1b;
+
+  /* Huruf */
+  --display: Caprasimo, Georgia, serif;
+  --sans: Figtree, system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* Radius & bayangan */
+  --r-pill: 999px;
+  --r-xl: 28px;
+  --r-lg: 24px;
+  --r-md: 20px;
+  --r-sm: 16px;
+  --shadow-sm: 0 3px 10px rgba(46, 43, 37, 0.16);
+  --shadow-lg: 0 12px 32px rgba(46, 43, 37, 0.14);
+  --shadow-code: 0 12px 32px rgba(46, 43, 37, 0.22);
+
+  /* Tinggi header */
+  --header-h: 64px;
+}

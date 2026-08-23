@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.local
+_design/
+*.local
+.DS_Store
+
+# Catatan pengujian lokal — sengaja tidak pernah masuk repo.
+uji.md
+
+# Bank soal lengkap (soal + kunci jawaban) — PRD §10: tidak pernah masuk repo publik.
+# Hanya untuk mencoba mode demo di komputer sendiri.
+src/lib/bankDemo.ts
