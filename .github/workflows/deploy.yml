@@ -26,11 +26,12 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
+          # VITE_API_URL SENGAJA tidak diset di sini: nilai kosong dari Actions akan
+          # menimpa .env.production dan diam-diam menerbitkan situs mode demo.
+          # Sumber tunggalnya adalah berkas .env.production.
           # Situs terbit di https://<user>.github.io/<repo>/ — hapus baris ini
           # bila memakai domain sendiri.
           BASE_PATH: /${{ github.event.repository.name }}/
-          # Isi lewat Settings → Secrets and variables → Actions → Variables.
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

@@ -20,13 +20,16 @@ npm install
 npm run dev
 ```
 
-Tanpa konfigurasi tambahan aplikasi berjalan dalam **mode demo**: bank soal contoh
-(36 soal) dipakai langsung dari browser, penilaian dihitung lokal, dan tidak ada
-yang dikirim ke Google Sheets. Setiap halaman menandainya dengan lencana
-“Mode demo”.
+Untuk **pengembangan lokal**, salin `.env.example` menjadi `.env`:
 
-Untuk menyambungkan ke backend sungguhan, salin `.env.example` menjadi `.env` dan
-isi `VITE_API_URL` dengan URL `/exec` milik Apps Script.
+- dibiarkan kosong → **mode demo**, memakai bank soal lokal `src/lib/bankDemo.ts`
+  (tidak ikut ter-commit) dan menilai di browser. Setiap halaman ditandai lencana
+  “Mode demo”. Hanya untuk mencoba — bukan untuk ujian yang dinilai, karena
+  seluruh kunci jawaban ada di perangkat murid.
+- diisi URL `/exec` Apps Script → memakai backend sungguhan.
+
+Untuk **build produksi**, URL-nya diambil dari `.env.production` yang ter-commit,
+sehingga rilis tidak bisa gagal hanya karena satu setelan lupa diisi.
 
 ---
 
@@ -127,25 +130,32 @@ rencana rilis PRD §14 — kartu unit di beranda menandai unit yang materinya be
 
 ## Bank soal & penilaian
 
-`src/lib/bankDemo.ts` berisi 36 soal untuk U1–U7, lengkap dengan 2 test contoh,
-3 test tersembunyi, kunci jawaban, dan `kodeReferensi` (solusi guru). Kolomnya
-sama persis dengan kolom sheet `_Bank` pada PRD §17.
+Keputusan PRD §10 dijaga secara mekanis: **soal, test tersembunyi, dan kunci
+jawaban tidak pernah ada di repo maupun di bundel yang diterima murid.**
 
-**Berkas ini hanya untuk mode demo.** Pada arsitektur sungguhnya ia tidak ada di
-repo: repo GitHub Pages bersifat publik, jadi soal, test tersembunyi, dan kunci
-jawaban tinggal di sheet `_Bank` milik guru. Saat sesi dibuka, Apps Script hanya
-mengirim deskripsi, test contoh, dan **input** test tersembunyi. Browser
-menjalankan kode murid lalu mengirim balik **keluarannya**; pencocokan dan
-perhitungan nilai terjadi di server.
+- `src/lib/bankSoal.ts` — modul kanonik, **sengaja kosong**, inilah yang ter-commit.
+- `src/lib/bankDemo.ts` — bank lengkap untuk mencoba tanpa backend. Masuk
+  `.gitignore`; `vite.config.ts` mengalihkan impor ke sini **hanya** bila
+  berkasnya ada DAN `VITE_API_URL` kosong.
+- Mode produksi — soal datang dari sheet `_Bank` lewat Apps Script.
 
-Halaman guru menyediakan **Periksa Bank Soal**: setiap `kodeReferensi` dijalankan
-di Pyodide terhadap seluruh test contoh dan test tersembunyi, lalu hasilnya
-dibandingkan dengan kunci. Baris yang kuncinya tidak cocok dengan solusinya sendiri
-ketahuan sebelum sesi dibuka, bukan saat 36 murid sudah duduk di depan komputer.
-Seluruh 36 soal di repo ini sudah lolos pemeriksaan tersebut.
+Build produksi diperiksa agar tidak ada satu pun id soal, `outputKunci`, atau
+`kodeReferensi` yang tersisa di bundel. `vite.config.ts` juga membatalkan build
+bila `VITE_API_URL` kosong sekaligus bank lokal tidak ada — situs tanpa soal
+lebih baik gagal terbit daripada baru ketahuan saat kelas sudah dimulai.
 
-Tombol **Unduh untuk sheet _Bank (.csv)** di panel yang sama menuliskan bank demo
-dalam susunan kolom `_Bank` sehingga bisa langsung diimpor ke spreadsheet guru.
+Susunan kolom `_Bank` mengikuti PRD §17. Beberapa test dalam satu sel dipisah
+tanda `|`, jadi jangan memakai karakter itu di dalam isi soal.
+
+Saat sesi dibuka, Apps Script hanya mengirim deskripsi, test contoh, dan
+**input** test tersembunyi. Browser menjalankan kode murid lalu mengirim balik
+**keluarannya**; pencocokan dan perhitungan nilai terjadi di server.
+
+Di mode demo, halaman guru menyediakan **Periksa Bank Soal**: setiap
+`kodeReferensi` dijalankan di Pyodide terhadap seluruh test, lalu hasilnya
+dibandingkan dengan kunci — sehingga baris yang kuncinya keliru ketahuan sebelum
+sesi dibuka. Pada mode produksi pemeriksaan setara dijalankan lewat fungsi
+`periksaBankSoal()` di editor Apps Script.
 
 ---
 
