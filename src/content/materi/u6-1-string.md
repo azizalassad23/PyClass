@@ -11,7 +11,7 @@ poin:
 ---
 
 ```python jalankan judul="Indexing dan slicing"
-teks = "Informatika"
+teks = "Komputer"
 print(teks[0])
 print(teks[-1])
 print(teks[:5])

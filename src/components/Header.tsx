@@ -90,7 +90,7 @@ export function Header({ jejak, kanan, ringkas = false }: HeaderProps) {
         ) : (
           <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
             <span style={{ fontFamily: 'var(--display)', fontSize: 20 }}>PyClass</span>
-            <span style={{ fontSize: 11, color: 'var(--muted-2)' }}>Kelas X · Informatika</span>
+            <span style={{ fontSize: 11, color: 'var(--muted-2)' }}>Kelas X · KKA</span>
           </span>
         )}
       </Link>
