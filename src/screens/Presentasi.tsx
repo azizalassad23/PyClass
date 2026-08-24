@@ -21,9 +21,15 @@ interface Props {
 export function Presentasi({ halaman, onKeluar, onPindah, bisaMaju, bisaMundur, nomor, total }: Props) {
   const contoh = halaman.contohKode[0];
   const [kode, setKode] = useState(contoh?.kode ?? '');
-  const { keadaan, mulai, sedangJalan } = useRunner();
+  const { keadaan, mulai, balasInput, bersihkan, sedangJalan } = useRunner();
+  const [baris, setBaris] = useState('');
 
-  useEffect(() => { setKode(halaman.contohKode[0]?.kode ?? ''); }, [halaman.slug, halaman.contohKode]);
+  // Pindah slide: muat contoh baru dan kosongkan konsol slide sebelumnya.
+  useEffect(() => {
+    setKode(halaman.contohKode[0]?.kode ?? '');
+    setBaris('');
+    bersihkan();
+  }, [halaman.slug, halaman.contohKode, bersihkan]);
 
   useEffect(() => {
     void document.documentElement.requestFullscreen?.().catch(() => undefined);
@@ -59,13 +65,8 @@ export function Presentasi({ halaman, onKeluar, onPindah, bisaMaju, bisaMundur, 
     };
   }, [onPindah]);
 
-  const keluaranTerakhir = keadaan.transkrip
-    .filter((b) => b.jenis === 'keluaran')
-    .map((b) => b.teks)
-    .join('')
-    .trim()
-    .split('\n')
-    .slice(-1)[0];
+  const sudahDijalankan =
+    keadaan.transkrip.length > 0 || Boolean(keadaan.galatMentah) || sedangJalan;
 
   return (
     <div className="presentasi" role="region" aria-label="Mode presentasi">
@@ -131,16 +132,82 @@ export function Presentasi({ halaman, onKeluar, onPindah, bisaMaju, bisaMundur, 
                   >
                     <span aria-hidden="true">▶</span> {sedangJalan ? 'Menjalankan…' : 'Jalankan'}
                   </button>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 17, color: 'var(--leaf)' }} role="status">
-                    {keadaan.menungguInput ? 'menunggu masukan…' : keluaranTerakhir}
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 17, color: 'var(--muted-3)' }} role="status">
+                    {sedangJalan
+                      ? 'menjalankan…'
+                      : keadaan.menungguInput
+                        ? 'menunggu masukan'
+                        : keadaan.selesai
+                          ? `selesai · ${(keadaan.durasiMs / 1000).toFixed(2)} detik`
+                          : ''}
                   </span>
                 </div>
+
+                {/* Seluruh keluaran ditampilkan, bukan hanya baris terakhir:
+                    contoh yang mencetak beberapa baris harus terbaca utuh dari
+                    bangku belakang. */}
+                {sudahDijalankan && (
+                  <div
+                    role="log"
+                    aria-live="polite"
+                    aria-label="Keluaran program"
+                    style={{
+                      background: 'var(--ink)', padding: '18px 22px',
+                      fontFamily: 'var(--mono)', fontSize: 'clamp(16px, 1.5vw, 21px)',
+                      lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                      maxHeight: '26vh', overflowY: 'auto',
+                    }}
+                  >
+                    <div
+                      className="eyebrow"
+                      style={{ fontFamily: 'var(--sans)', color: 'var(--muted-2)', marginBottom: 8 }}
+                    >
+                      Keluaran
+                    </div>
+                    {keadaan.transkrip.map((b, i) =>
+                      b.jenis === 'keluaran' ? (
+                        <span key={i} style={{ color: '#f9f4ed' }}>{b.teks}</span>
+                      ) : (
+                        <span key={i} style={{ color: 'var(--brand-lit)' }}>{b.teks}{'\n'}</span>
+                      ),
+                    )}
+                    {keadaan.galatRamah && (
+                      <div style={{ color: 'var(--brand-lit)', fontFamily: 'var(--sans)', marginTop: 10 }}>
+                        <b>{keadaan.galatRamah.judul}</b>
+                        <div style={{ color: '#e8ddd0', fontSize: '.85em' }}>{keadaan.galatRamah.saran}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* input() tetap bisa dijawab tanpa keluar dari mode presentasi —
+                    banyak contoh di U1–U3 memakainya. */}
+                {keadaan.menungguInput && (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); const b = baris; setBaris(''); void balasInput(kode, b); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      background: 'var(--ink-code)', padding: '14px 22px',
+                      borderTop: '1px solid var(--ink-chrome)',
+                    }}
+                  >
+                    <span aria-hidden="true" style={{ color: 'var(--brand-lit)', fontSize: 22 }}>›</span>
+                    <input
+                      autoFocus
+                      value={baris}
+                      onChange={(e) => setBaris(e.target.value)}
+                      aria-label="Masukan untuk program"
+                      placeholder="ketik masukan lalu tekan Enter…"
+                      style={{
+                        flex: 1, background: 'transparent', border: 0, outline: 'none',
+                        color: '#f9f4ed', fontFamily: 'var(--mono)',
+                        fontSize: 'clamp(16px, 1.5vw, 21px)', padding: '6px 0',
+                      }}
+                    />
+                    <button type="submit" className="btn btn--primary" style={{ fontSize: 17 }}>Kirim</button>
+                  </form>
+                )}
               </div>
-              {keadaan.menungguInput && (
-                <p style={{ marginTop: 14, fontSize: 16, color: 'var(--muted-2)' }}>
-                  Contoh ini meminta masukan — keluar dari mode presentasi untuk mengetiknya di panel keluaran.
-                </p>
-              )}
             </>
           ) : (
             <p style={{ fontSize: 20, color: 'var(--muted-2)' }}>Halaman ini tidak memuat contoh kode.</p>
