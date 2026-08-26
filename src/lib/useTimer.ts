@@ -16,9 +16,16 @@ export interface KeadaanTimer {
   peringatan: 5 | 1 | null;
 }
 
-export function useTimer(kunci: string, durasiMenit: number, aktif: boolean) {
+/**
+ * @param tambahanMenit Tambahan waktu dari guru (F-G06). Disimpan terpisah dari
+ *   waktu selesai dasar supaya tetap akurat setelah refresh, dan supaya dua kali
+ *   pemberian tambahan tidak saling menimpa.
+ */
+export function useTimer(
+  kunci: string, durasiMenit: number, aktif: boolean, tambahanMenit = 0,
+) {
   const kunciPenuh = `timer:${kunci}`;
-  const [selesaiPada] = useState<number>(() => {
+  const [selesaiDasar] = useState<number>(() => {
     const tersimpan = baca<number | null>(kunciPenuh, null);
     if (tersimpan && tersimpan > 0) return tersimpan;
     const baru = Date.now() + durasiMenit * 60_000;
@@ -26,12 +33,18 @@ export function useTimer(kunci: string, durasiMenit: number, aktif: boolean) {
     return baru;
   });
 
+  const selesaiPada = selesaiDasar + tambahanMenit * 60_000;
+
   const hitung = useCallback(
     (): number => Math.max(0, Math.round((selesaiPada - Date.now()) / 1000)),
     [selesaiPada],
   );
 
   const [sisaDetik, setSisa] = useState(hitung);
+
+  // Tambahan waktu bisa datang kapan saja lewat balasan denyut — sisa waktu
+  // harus langsung ikut naik, tidak menunggu detik berikutnya.
+  useEffect(() => { setSisa(hitung()); }, [hitung]);
   const peringatanTerkirim = useRef<Set<number>>(new Set());
   const [peringatan, setPeringatan] = useState<5 | 1 | null>(null);
 
@@ -59,13 +72,18 @@ export function useTimer(kunci: string, durasiMenit: number, aktif: boolean) {
     habis: sisaDetik <= 0,
     peringatan,
     selesaiPada,
+    /** Saat ujian dimulai — tetap tepat walau waktunya ditambah di tengah jalan. */
+    mulaiPada: selesaiDasar - durasiMenit * 60_000,
     /** Dipanggil setelah submit agar sesi berikutnya mulai dari durasi penuh. */
     hapusTimer,
-  } satisfies KeadaanTimer & { selesaiPada: number; hapusTimer: () => void };
+  } satisfies KeadaanTimer & { selesaiPada: number; mulaiPada: number; hapusTimer: () => void };
 }
 
-/** Berapa menit sudah dipakai — dikirim ke Sheets sebagai kolom Durasi. */
-export function menitTerpakai(selesaiPada: number, durasiMenit: number): number {
-  const mulai = selesaiPada - durasiMenit * 60_000;
-  return Math.max(0, Math.min(durasiMenit, Math.round((Date.now() - mulai) / 60_000)));
+/**
+ * Berapa menit sudah dipakai — dikirim ke Sheets sebagai kolom Durasi.
+ * Dihitung dari waktu MULAI, bukan dari waktu selesai, supaya tambahan waktu
+ * dari guru tidak menggeser angkanya.
+ */
+export function menitTerpakai(mulaiPada: number, batasMenit: number): number {
+  return Math.max(0, Math.min(batasMenit, Math.round((Date.now() - mulaiPada) / 60_000)));
 }

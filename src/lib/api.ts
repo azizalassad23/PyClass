@@ -7,7 +7,8 @@
  */
 import * as demo from './mockBackend';
 import type {
-  BarisRekap, HasilPenilaian, Kelas, PaketUjian, SesiInfo, SubmitPayload,
+  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, PaketUjian, SesiInfo,
+  SubmitPayload,
 } from './types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? '').trim();
@@ -48,6 +49,31 @@ export async function ambilPaket(sesi: string, nis: string): Promise<PaketUjian>
 export async function kirimJawaban(p: SubmitPayload): Promise<HasilPenilaian> {
   if (MODE_DEMO) return demo.nilaiSubmisi(p);
   return post<HasilPenilaian>('nilai', p);
+}
+
+/**
+ * Kabar berkala saat mengerjakan. Balasannya membawa tambahan waktu yang
+ * diberikan guru, jadi satu permintaan melayani dua arah sekaligus.
+ * Kegagalan di sini TIDAK boleh mengganggu ujian — pemanggil mengabaikannya.
+ */
+export async function kirimDenyut(d: Denyut): Promise<{ tambahanMenit: number }> {
+  if (MODE_DEMO) return demo.denyut(d);
+  return post<{ tambahanMenit: number }>('denyut', d);
+}
+
+export async function ambilPantau(pin: string, sesi: string): Promise<BarisPantau[]> {
+  if (MODE_DEMO) return demo.pantau(sesi);
+  const data = await get<{ baris: BarisPantau[] }>({ action: 'pantau', sesi, pin });
+  return data.baris;
+}
+
+/** `nis` = "SEMUA" menambah waktu untuk seluruh murid di sesi itu. */
+export async function tambahWaktu(
+  pin: string, sesi: string, nis: string, menit: number,
+): Promise<number> {
+  if (MODE_DEMO) return demo.tambahWaktu(sesi, nis, menit);
+  const data = await post<{ kena: number }>('tambahWaktu', { pin, sesi, nis, menit });
+  return data.kena;
 }
 
 export async function cekSesi(kode: string): Promise<SesiInfo> {

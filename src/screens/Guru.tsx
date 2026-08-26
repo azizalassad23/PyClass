@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Header } from '../components/Header';
+import { PapanPantau } from '../components/PapanPantau';
 import { PeriksaBankSoal } from '../components/PeriksaBankSoal';
 import {
   ambilRekap, bukaSesi, MODE_DEMO, sesiKelas, tutupSesi, verifikasiPin,
@@ -313,6 +314,10 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                 </button>
               </div>
             </section>
+          )}
+
+          {sesi && sesi.status === 'berjalan' && (
+            <PapanPantau pin={pin} sesi={sesi.kode} durasiMenit={sesi.durasiMenit} />
           )}
 
           <section className="card" style={{ padding: 0, overflow: 'hidden' }}>

@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { LencanaDemo } from '../components/Header';
 import { KonsolPython } from '../components/KonsolPython';
 import { PanelEditor } from '../components/PanelEditor';
-import { kirimDenganUlangan } from '../lib/api';
+import { kirimDenganUlangan, kirimDenyut } from '../lib/api';
 import { mmss, normalisasiKeluaran, sejakDetik } from '../lib/format';
 import { useAntiCheat, useJejakSoal } from '../lib/useAntiCheat';
 import { menitTerpakai, useTimer } from '../lib/useTimer';
@@ -51,10 +51,31 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   const { fase, panaskan, sedangJalan } = usePython();
   const { pindahTab, peringatan, tutupPeringatan } = useAntiCheat(kunciSesi, !mengirim);
   const { jejak, masukSoal, catatJalan } = useJejakSoal(kunciSesi);
-  const { sisaDetik, habis, peringatan: peringatanWaktu, selesaiPada, hapusTimer } =
-    useTimer(kunciSesi, paket.durasiMenit, !mengirim);
+  // Tambahan waktu dari guru datang lewat balasan denyut (F-G06).
+  const [tambahanMenit, setTambahanMenit] = useState(0);
+  const { sisaDetik, habis, peringatan: peringatanWaktu, mulaiPada, hapusTimer } =
+    useTimer(kunciSesi, paket.durasiMenit, !mengirim, tambahanMenit);
 
   const kirimRef = useRef<(status: 'selesai' | 'waktu-habis') => void>(() => undefined);
+
+  // Cermin dari state yang dibaca denyut. Tanpa ini, interval 45 detik harus
+  // dibuat ulang setiap ketikan murid — dan denyutnya tidak pernah sempat jalan.
+  const indeksRef = useRef(indeks);
+  const jawabanRef = useRef(jawaban);
+  const hasilTestRef = useRef(hasilTest);
+  const jejakRef = useRef(jejak);
+  const pindahTabRef = useRef(pindahTab);
+  const sisaDetikRef = useRef(sisaDetik);
+  const masukSoalPadaRef = useRef(Date.now());
+  const dikerjakanRef = useRef<(s: { id: string; kodeAwal?: string }, kode: string) => boolean>(() => false);
+  indeksRef.current = indeks;
+  jawabanRef.current = jawaban;
+  hasilTestRef.current = hasilTest;
+  jejakRef.current = jejak;
+  pindahTabRef.current = pindahTab;
+  sisaDetikRef.current = sisaDetik;
+
+  useEffect(() => { masukSoalPadaRef.current = Date.now(); }, [indeks]);
 
   useEffect(() => { panaskan(); }, [panaskan]);
   useEffect(() => { masukSoal(soal.id); }, [soal.id, masukSoal]);
@@ -72,6 +93,48 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   useEffect(() => {
     if (habis && !mengirim) kirimRef.current('waktu-habis');
   }, [habis, mengirim]);
+
+  /**
+   * Denyut ke guru tiap 45 detik: mengabarkan progres, sekaligus menjemput
+   * tambahan waktu. Sengaja tidak sesering autosave — 36 murid yang berdenyut
+   * bersamaan sudah cukup membebani Apps Script.
+   *
+   * Kegagalan diabaikan diam-diam: ini fitur pengawasan, bukan bagian dari
+   * pengerjaan. Ujian harus tetap jalan walau papan pantau mati.
+   */
+  useEffect(() => {
+    if (mengirim) return;
+    let batal = false;
+
+    const berdenyut = async () => {
+      try {
+        const hasil = await kirimDenyut({
+          sesi: identitas.sesi,
+          kelas: identitas.kelas,
+          nis: identitas.nis,
+          nama: identitas.nama,
+          soalAktif: indeksRef.current + 1,
+          totalSoal: paket.soal.length,
+          diisi: paket.soal.filter((s) => dikerjakanRef.current(s, jawabanRef.current[s.id] ?? '')).length,
+          lulusContoh: Object.values(hasilTestRef.current).filter(
+            (h) => h.length > 0 && h.every((x) => x.cocok),
+          ).length,
+          jalanSoalAktif: jejakRef.current[paket.soal[indeksRef.current].id]?.jalan ?? 0,
+          detikSoalAktif: Math.round((Date.now() - masukSoalPadaRef.current) / 1000),
+          pindahTab: pindahTabRef.current,
+          sisaDetik: sisaDetikRef.current,
+          status: 'mengerjakan',
+        });
+        if (!batal && hasil.tambahanMenit > 0) setTambahanMenit(hasil.tambahanMenit);
+      } catch {
+        /* papan pantau sedang tidak bisa dihubungi — abaikan */
+      }
+    };
+
+    void berdenyut();
+    const id = window.setInterval(() => void berdenyut(), 45_000);
+    return () => { batal = true; window.clearInterval(id); };
+  }, [mengirim, identitas, paket.soal]);
 
   // Konsol dikosongkan saat pindah soal agar keluaran soal lain tidak tertinggal.
   useEffect(() => { bersihkanKonsol(); }, [soal.id, bersihkanKonsol]);
@@ -132,7 +195,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
         paket: paket.paket,
         jenis: paket.jenis,
         jawaban: terkirim,
-        durasiMenit: menitTerpakai(selesaiPada, paket.durasiMenit),
+        durasiMenit: menitTerpakai(mulaiPada, paket.durasiMenit + tambahanMenit),
         pindahTab,
         status,
       };
@@ -155,11 +218,25 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
       hapusTimer();
       navigate('/ujian/hasil');
     },
-    [identitas, jawaban, paket, jalankanTest, selesaiPada, pindahTab, hapusTimer, navigate],
+    [identitas, jawaban, paket, jalankanTest, mulaiPada, tambahanMenit, pindahTab, hapusTimer, navigate],
   );
   kirimRef.current = (status) => void kirim(status);
 
-  const belumDiisi = paket.soal.filter((s) => !(jawaban[s.id] ?? '').trim()).length;
+  /**
+   * "Terisi" berarti murid benar-benar menulis sesuatu — kode awal bawaan soal
+   * tidak dihitung. Tanpa ini, konfirmasi kirim akan berkata "seluruh soal sudah
+   * diisi" pada murid yang belum mengetik satu huruf pun, dan papan pantau guru
+   * ikut berbohong.
+   */
+  const sudahDikerjakan = useCallback(
+    (s: { id: string; kodeAwal?: string }, kode: string) => {
+      const isi = (kode ?? '').trim();
+      return isi.length > 0 && isi !== (s.kodeAwal ?? '').trim();
+    },
+    [],
+  );
+  dikerjakanRef.current = sudahDikerjakan;
+  const belumDiisi = paket.soal.filter((s) => !sudahDikerjakan(s, jawaban[s.id] ?? '')).length;
 
   if (mengirim) {
     return (
@@ -214,6 +291,11 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
             {mmss(sisaDetik)}
           </span>
         </span>
+        {tambahanMenit > 0 && (
+          <span className="pill pill--leaf" title="Guru menambahkan waktu untukmu">
+            +{tambahanMenit} menit dari guru
+          </span>
+        )}
         {/* Mengirim adalah aksi sekali jalan, jadi tempatnya di header — jauh
             dari tombol-tombol yang dipakai terus-menerus saat mengerjakan. */}
         <button
@@ -280,7 +362,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
           {paket.soal.map((s, i) => {
             const hasil = hasilTest[s.id];
             const semuaLulus = hasil && hasil.every((h) => h.cocok);
-            const dicoba = Boolean((jawaban[s.id] ?? '').trim());
+            const dicoba = sudahDikerjakan(s, jawaban[s.id] ?? '');
             const aktif = i === indeks;
             return (
               <button

@@ -13,7 +13,8 @@ import { normalisasiKeluaran } from './format';
 import { hashSeed, kodeKonfirmasi, mulberry32, pilihAcak } from './rng';
 import { baca, daftarKunci, tulis } from './storage';
 import type {
-  BarisRekap, HasilPenilaian, Kelas, PaketUjian, SesiInfo, Soal, SubmitPayload,
+  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, PaketUjian, SesiInfo, Soal,
+  SubmitPayload,
 } from './types';
 
 const K_SESI = 'demo:sesi';
@@ -205,6 +206,57 @@ export function nilaiSubmisi(p: SubmitPayload): HasilPenilaian {
   };
   tulis(kunciBaris, baris);
   return hasil;
+}
+
+// ── Papan pantau ─────────────────────────────────────────────────────────────
+
+const K_PANTAU = 'demo:pantau:';
+
+/** Simpanan denyut mode demo — di server ini adalah sheet `_Progres`. */
+interface BarisPantauTersimpan extends BarisPantau {
+  sesi: string;
+}
+
+export function denyut(d: Denyut): { tambahanMenit: number } {
+  const kunci = `${K_PANTAU}${d.sesi}:${d.nis}`;
+  const lama = baca<BarisPantauTersimpan | null>(kunci, null);
+  const tambahanMenit = lama?.tambahanMenit ?? 0;
+  tulis(kunci, {
+    sesi: d.sesi,
+    nis: d.nis,
+    nama: d.nama,
+    soalAktif: d.soalAktif,
+    totalSoal: d.totalSoal,
+    diisi: d.diisi,
+    lulusContoh: d.lulusContoh,
+    jalanSoalAktif: d.jalanSoalAktif,
+    detikSoalAktif: d.detikSoalAktif,
+    pindahTab: d.pindahTab,
+    sisaDetik: d.sisaDetik,
+    status: d.status,
+    // Tambahan menit milik guru — denyut tidak boleh menimpanya.
+    tambahanMenit,
+    diperbaruiPada: Date.now(),
+  } satisfies BarisPantauTersimpan);
+  return { tambahanMenit };
+}
+
+export function pantau(sesi: string): BarisPantau[] {
+  return daftarKunci(`${K_PANTAU}${sesi}:`)
+    .map((k) => baca<BarisPantauTersimpan | null>(k, null))
+    .filter((b): b is BarisPantauTersimpan => b !== null)
+    .sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+}
+
+export function tambahWaktu(sesi: string, nis: string, menit: number): number {
+  const kunci = daftarKunci(`${K_PANTAU}${sesi}:`).filter(
+    (k) => nis === 'SEMUA' || k.endsWith(`:${nis}`),
+  );
+  for (const k of kunci) {
+    const b = baca<BarisPantauTersimpan | null>(k, null);
+    if (b) tulis(k, { ...b, tambahanMenit: (b.tambahanMenit ?? 0) + menit });
+  }
+  return kunci.length;
 }
 
 // ── Rekap ────────────────────────────────────────────────────────────────────

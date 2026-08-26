@@ -122,7 +122,9 @@ petunjuk: Terbuka setelah dua kali percobaan.
 :::
 ```
 
-Yang sudah ditulis: **U1–U3 lengkap (10 halaman, pertemuan 1–10 sampai UTS)**, dan
+Yang sudah ditulis: **U1–U3 lengkap (12 halaman, pertemuan 1–10 sampai UTS)** — termasuk
+*Membaca Pesan Error* (U1) dan *Mencari Kesalahan dengan print()* (U2), dua keterampilan
+yang dipakai sepanjang semester — dan
 satu halaman wakil untuk masing-masing U4–U8. Sisanya menyusul pada tahap M5 sesuai
 rencana rilis PRD §14 — kartu unit di beranda menandai unit yang materinya belum ada.
 

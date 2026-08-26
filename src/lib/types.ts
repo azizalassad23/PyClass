@@ -113,3 +113,37 @@ export interface SoalBank extends Soal {
   /** Solusi guru — dipakai "Periksa Bank Soal" untuk memvalidasi kunci. */
   kodeReferensi: string;
 }
+
+/** Kabar berkala dari murid yang sedang mengerjakan (papan pantau guru). */
+export interface Denyut {
+  sesi: string;
+  kelas: Kelas;
+  nis: string;
+  nama: string;
+  /** Nomor soal yang sedang dibuka, 1-based. */
+  soalAktif: number;
+  totalSoal: number;
+  diisi: number;
+  lulusContoh: number;
+  jalanSoalAktif: number;
+  detikSoalAktif: number;
+  pindahTab: number;
+  sisaDetik: number;
+  status: 'mengerjakan' | 'mengirim';
+}
+
+export interface BarisPantau {
+  nis: string;
+  nama: string;
+  soalAktif: number;
+  totalSoal: number;
+  diisi: number;
+  lulusContoh: number;
+  jalanSoalAktif: number;
+  detikSoalAktif: number;
+  pindahTab: number;
+  sisaDetik: number;
+  status: string;
+  tambahanMenit: number;
+  diperbaruiPada: number | null;
+}

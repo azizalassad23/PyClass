@@ -35,6 +35,18 @@ var KOLOM_BANK = [
 var KOLOM_SESI = ['Kode Sesi', 'Kelas', 'Paket', 'Jenis', 'Judul', 'Durasi', 'Dibuka', 'Ditutup', 'Status'];
 var KOLOM_LOG = ['Waktu', 'Jenis', 'Keterangan'];
 
+/**
+ * Papan pantau ujian yang sedang berjalan. Isinya sementara dan boleh dihapus
+ * kapan saja — nilai yang sah tetap ada di sheet kelas.
+ * Kolom N (Tambahan Menit) HANYA ditulis guru; denyut murid tidak menyentuhnya.
+ */
+var KOLOM_PROGRES = [
+  'Kode Sesi', 'Kelas', 'NIS', 'Nama', 'Soal Aktif', 'Total Soal', 'Diisi',
+  'Lulus Contoh', 'Jalan di Soal Ini', 'Detik di Soal Ini', 'Pindah Tab',
+  'Sisa Detik', 'Status', 'Tambahan Menit', 'Diperbarui'
+];
+var KOL_TAMBAHAN = 14; // kolom N, 1-based
+
 // ─────────────────────────────── Router ───────────────────────────────
 
 function doGet(e) {
@@ -45,6 +57,7 @@ function doGet(e) {
       case 'sesi':     return json(aksiSesi(e.parameter));
       case 'sesiKelas':return json(aksiSesiKelas(e.parameter));
       case 'rekap':    return json(aksiRekap(e.parameter));
+      case 'pantau':   return json(aksiPantau(e.parameter));
       case 'cekPin':   return json(aksiCekPin(e.parameter));
       default:         return json({ ok: false, pesan: 'Aksi tidak dikenal: ' + aksi });
     }
@@ -64,9 +77,11 @@ function doPost(e) {
   }
   try {
     switch (aksi) {
-      case 'nilai':     return json(aksiNilai(badan));
-      case 'bukaSesi':  return json(aksiBukaSesi(badan));
-      case 'tutupSesi': return json(aksiTutupSesi(badan));
+      case 'nilai':       return json(aksiNilai(badan));
+      case 'denyut':      return json(aksiDenyut(badan));
+      case 'bukaSesi':    return json(aksiBukaSesi(badan));
+      case 'tutupSesi':   return json(aksiTutupSesi(badan));
+      case 'tambahWaktu': return json(aksiTambahWaktu(badan));
       default:          return json({ ok: false, pesan: 'Aksi tidak dikenal: ' + aksi });
     }
   } catch (err) {
@@ -188,6 +203,50 @@ function aksiNilai(b) {
   };
 }
 
+/**
+ * POST ?action=denyut
+ * Kabar berkala dari murid yang sedang mengerjakan, supaya guru bisa memantau
+ * kelas tanpa menunggu submisi. Balasannya membawa `tambahanMenit` — satu
+ * perjalanan bolak-balik dipakai untuk dua keperluan sekaligus.
+ *
+ * Sengaja memakai tryLock, bukan waitLock: kalau 36 murid berdenyut hampir
+ * bersamaan, lebih baik satu kabar dilewati daripada permintaan menumpuk.
+ * Data ini hanya informatif — denyut berikutnya akan menyusul 45 detik lagi.
+ */
+function aksiDenyut(b) {
+  var sesi = cariSesi(b.sesi);
+  if (!sesi) return { ok: false, pesan: 'Sesi tidak ditemukan' };
+
+  var kunci = LockService.getScriptLock();
+  if (!kunci.tryLock(5000)) {
+    return { ok: true, dilewati: true, tambahanMenit: 0 };
+  }
+  try {
+    var sheet = sheetProgres();
+    var data = sheet.getDataRange().getValues();
+    var baris = [
+      String(b.sesi), b.kelas, String(b.nis), b.nama,
+      Number(b.soalAktif) || 0, Number(b.totalSoal) || 0, Number(b.diisi) || 0,
+      Number(b.lulusContoh) || 0, Number(b.jalanSoalAktif) || 0,
+      Number(b.detikSoalAktif) || 0, Number(b.pindahTab) || 0,
+      Number(b.sisaDetik) || 0, b.status || 'mengerjakan'
+    ];
+
+    for (var r = 1; r < data.length; r++) {
+      if (String(data[r][0]) === String(b.sesi) && String(data[r][2]) === String(b.nis)) {
+        // Kolom A–M diperbarui; N (Tambahan Menit) milik guru, jangan disentuh.
+        sheet.getRange(r + 1, 1, 1, baris.length).setValues([baris]);
+        sheet.getRange(r + 1, KOL_TAMBAHAN + 1).setValue(new Date());
+        return { ok: true, tambahanMenit: Number(data[r][KOL_TAMBAHAN - 1]) || 0 };
+      }
+    }
+    sheet.appendRow(baris.concat([0, new Date()]));
+    return { ok: true, tambahanMenit: 0 };
+  } finally {
+    kunci.releaseLock();
+  }
+}
+
 // ─────────────────────────────── Aksi guru ───────────────────────────────
 
 function pastikanPin(pin) {
@@ -252,6 +311,63 @@ function aksiSesiKelas(p) {
     }
   }
   return { ok: false, pesan: 'Belum ada sesi berjalan untuk kelas ini' };
+}
+
+/**
+ * GET ?action=pantau&sesi=...&pin=...
+ * Papan pantau kelas saat ujian berlangsung.
+ */
+function aksiPantau(p) {
+  pastikanPin(p.pin);
+  var data = sheetProgres().getDataRange().getValues();
+  var baris = [];
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][0]) !== String(p.sesi)) continue;
+    baris.push({
+      nis: String(data[r][2]),
+      nama: data[r][3],
+      soalAktif: Number(data[r][4]) || 0,
+      totalSoal: Number(data[r][5]) || 0,
+      diisi: Number(data[r][6]) || 0,
+      lulusContoh: Number(data[r][7]) || 0,
+      jalanSoalAktif: Number(data[r][8]) || 0,
+      detikSoalAktif: Number(data[r][9]) || 0,
+      pindahTab: Number(data[r][10]) || 0,
+      sisaDetik: Number(data[r][11]) || 0,
+      status: data[r][12],
+      tambahanMenit: Number(data[r][13]) || 0,
+      diperbaruiPada: data[r][14] ? new Date(data[r][14]).getTime() : null
+    });
+  }
+  baris.sort(function (a, b) { return a.nama < b.nama ? -1 : 1; });
+  return { ok: true, baris: baris };
+}
+
+/**
+ * POST ?action=tambahWaktu
+ * Menambah menit untuk satu murid, atau seluruh kelas bila nis = "SEMUA".
+ * Murid menerimanya pada denyut berikutnya (paling lama 45 detik).
+ */
+function aksiTambahWaktu(b) {
+  pastikanPin(b.pin);
+  var menit = Number(b.menit) || 0;
+  if (menit === 0) return { ok: false, pesan: 'Jumlah menit tidak boleh nol' };
+
+  var sheet = sheetProgres();
+  var data = sheet.getDataRange().getValues();
+  var kena = 0;
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][0]) !== String(b.sesi)) continue;
+    if (String(b.nis) !== 'SEMUA' && String(data[r][2]) !== String(b.nis)) continue;
+    var sekarang = Number(data[r][KOL_TAMBAHAN - 1]) || 0;
+    sheet.getRange(r + 1, KOL_TAMBAHAN).setValue(sekarang + menit);
+    kena++;
+  }
+  if (kena === 0) {
+    return { ok: false, pesan: 'Murid itu belum terpantau di sesi ini — ia baru muncul setelah denyut pertama.' };
+  }
+  catatLog('waktu', 'Sesi ' + b.sesi + ' — ' + b.nis + ' ditambah ' + menit + ' menit (' + kena + ' baris)');
+  return { ok: true, kena: kena };
 }
 
 function aksiRekap(p) {
@@ -417,7 +533,8 @@ function sheetBank() {
   return s;
 }
 
-function sheetSesi() { return ambilAtauBuat('_Sesi', KOLOM_SESI); }
+function sheetSesi()    { return ambilAtauBuat('_Sesi', KOLOM_SESI); }
+function sheetProgres() { return ambilAtauBuat('_Progres', KOLOM_PROGRES); }
 function sheetLog()  { return ambilAtauBuat('_Log', KOLOM_LOG); }
 
 function catatLog(jenis, keterangan) {
@@ -530,6 +647,7 @@ function siapkanSpreadsheet() {
   }
   ambilAtauBuat('_Bank', KOLOM_BANK);
   sheetSesi();
+  sheetProgres();
   sheetLog();
   ambilAtauBuat('_Rekap', ['NIS', 'Nama', 'Kelas', 'Rata Kuis', 'UTS', 'UAS', 'Nilai Akhir']);
   SpreadsheetApp.getUi().alert('Seluruh sheet PyClass siap. Isi _Bank lalu deploy sebagai Web App.');
