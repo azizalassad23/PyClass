@@ -18,14 +18,27 @@
 var PIN_PROPERTY = 'PIN_GURU';
 var KELAS = ['XA', 'XB', 'XC', 'XD'];
 
-var KOLOM_NILAI = [
-  'Timestamp', 'NIS', 'Nama', 'Paket', 'Kode Sesi', 'Nilai Akhir', 'Test Lulus / Total',
-  'Nilai Soal 1', 'Nilai Soal 2', 'Nilai Soal 3', 'Nilai Soal 4', 'Nilai Soal 5',
-  'Nilai Soal 6', 'Nilai Soal 7', 'Nilai Soal 8', 'Nilai Soal 9', 'Nilai Soal 10',
-  'Durasi (menit)', 'Pindah Tab', 'Status', 'Kode Konfirmasi',
-  'Kode Soal 1', 'Kode Soal 2', 'Kode Soal 3', 'Kode Soal 4', 'Kode Soal 5',
-  'Kode Soal 6', 'Kode Soal 7', 'Kode Soal 8', 'Kode Soal 9', 'Kode Soal 10'
-];
+/**
+ * Susunan kolom sheet nilai untuk n soal. Ujian & kuis memakai n = 10 (kuis
+ * hanya mengisi 5 kolom pertama); Pra-Term Quiz memakai n = 20. Kolom sesudah
+ * blok nilai soal ikut bergeser mengikuti n, jadi pembacaan indeksnya WAJIB
+ * lewat posisiKolom() — jangan menulis angka indeks langsung.
+ *
+ * Untuk n = 10 hasilnya identik dengan susunan lama, sehingga sheet Ujian dan
+ * Kuis yang sudah berisi data tidak berubah sama sekali.
+ */
+function kolomNilai(n) {
+  var k = ['Timestamp', 'NIS', 'Nama', 'Paket', 'Kode Sesi', 'Nilai Akhir', 'Test Lulus / Total'];
+  for (var i = 1; i <= n; i++) k.push('Nilai Soal ' + i);
+  k.push('Durasi (menit)', 'Pindah Tab', 'Status', 'Kode Konfirmasi');
+  for (var j = 1; j <= n; j++) k.push('Kode Soal ' + j);
+  return k;
+}
+
+/** Indeks kolom (0-based) sesudah blok nilai soal, pada sheet dengan n soal. */
+function posisiKolom(n) {
+  return { durasi: 7 + n, pindahTab: 8 + n, status: 9 + n, konfirmasi: 10 + n };
+}
 
 var KOLOM_BANK = [
   'id', 'unit', 'jenis', 'grup', 'tingkat', 'bobot', 'judul', 'deskripsi',
@@ -151,6 +164,11 @@ function aksiNilai(b) {
     return { ok: false, pesan: 'Kelas tidak dikenal: ' + b.kelas };
   }
 
+  // Jenis dan paket diambil dari sesi di server, bukan dari kiriman browser:
+  // keduanya menentukan sheet tujuan dan kunci penimpaan baris.
+  b.jenis = sesi.jenis;
+  b.paket = sesi.paket;
+
   var bank = petaBank();
   var perSoal = [];
   var lulusTotal = 0;
@@ -274,7 +292,7 @@ function aksiBukaSesi(b) {
     }
   }
 
-  var jenis = b.paket.indexOf('kuis') === 0 ? 'kuis' : 'ujian';
+  var jenis = jenisPaket(b.paket);
   var kode = String(Math.floor(100000 + Math.random() * 900000));
   sheet.appendRow([
     kode, b.kelas, b.paket, jenis, judulPaket(b.paket),
@@ -374,6 +392,7 @@ function aksiRekap(p) {
   pastikanPin(p.pin);
   var sheet = sheetNilai(p.kelas, p.jenis);
   var data = sheet.getDataRange().getValues();
+  var kol = posisiKolom(slotSoal(p.jenis));
   var baris = [];
   for (var r = 1; r < data.length; r++) {
     if (String(data[r][4]) !== String(p.sesi)) continue;
@@ -382,10 +401,10 @@ function aksiRekap(p) {
       nis: String(data[r][1]),
       nilai: data[r][5],
       testLulus: data[r][6],
-      durasiMenit: data[r][17],
-      pindahTab: data[r][18],
-      status: data[r][19],
-      konfirmasi: data[r][20]
+      durasiMenit: data[r][kol.durasi],
+      pindahTab: data[r][kol.pindahTab],
+      status: data[r][kol.status],
+      konfirmasi: data[r][kol.konfirmasi]
     });
   }
   baris.sort(function (a, b) { return a.nama < b.nama ? -1 : 1; });
@@ -480,10 +499,18 @@ function susunSoal(sesi, nis) {
  * Daftar grup per posisi soal. Disimpan di sini (bukan di sheet) karena jarang
  * berubah; menambah VARIAN soal cukup lewat kolom `grup` di _Bank.
  */
+/** Pra-Term Quiz: 20 posisi (tq-p1 … tq-p20), soal berbahasa Inggris dari Unit 1–3. */
+var POSISI_PRA_TERM = (function () {
+  var p = [];
+  for (var i = 1; i <= 20; i++) p.push('tq-p' + i);
+  return p;
+})();
+
 function posisiPaket(paket) {
   var peta = {
     'uts-ganjil': ['u1-p1', 'u1-p4', 'u2-p1', 'u2-p2', 'u1-p2', 'u2-p5', 'u3-p1', 'u3-p5', 'u3-p2', 'u3-p3'],
-    'uas-genap':  ['u1-p3', 'u2-p3', 'u3-p2', 'u4-p2', 'u4-p5', 'u5-p1', 'u6-p1', 'u6-p3', 'u7-p2', 'u7-p4']
+    'uas-genap':  ['u1-p3', 'u2-p3', 'u3-p2', 'u4-p2', 'u4-p5', 'u5-p1', 'u6-p1', 'u6-p3', 'u7-p2', 'u7-p4'],
+    'pra-term':   POSISI_PRA_TERM
   };
   if (peta[paket]) return peta[paket];
   var cocok = /^kuis-(u\d)$/.exec(paket);
@@ -497,8 +524,26 @@ function posisiPaket(paket) {
 function judulPaket(paket) {
   if (paket === 'uts-ganjil') return 'Ujian Tengah Semester';
   if (paket === 'uas-genap') return 'Ujian Akhir Semester';
+  if (paket === 'pra-term') return 'Pra-Term Quiz';
   var cocok = /^kuis-u(\d)$/.exec(paket);
   return cocok ? 'Kuis Unit ' + cocok[1] : paket;
+}
+
+/** Jenis penilaian menentukan sheet nilai tujuan. */
+function jenisPaket(paket) {
+  if (paket === 'pra-term') return 'termquiz';
+  if (/^kuis-/.test(paket)) return 'kuis';
+  return 'ujian';
+}
+
+/** Banyak kolom "Nilai Soal" / "Kode Soal" di sheet nilai jenis ini. */
+function slotSoal(jenis) {
+  return jenis === 'termquiz' ? 20 : 10;
+}
+
+function namaSheetNilai(kelas, jenis) {
+  var akhiran = jenis === 'kuis' ? 'Kuis' : jenis === 'termquiz' ? 'Term Quiz' : 'Ujian';
+  return kelas + ' — ' + akhiran;
 }
 
 // ─────────────────────────────── Sheets ───────────────────────────────
@@ -518,12 +563,14 @@ function ambilAtauBuat(nama, kepala) {
 }
 
 function sheetNilai(kelas, jenis) {
-  var nama = kelas + ' — ' + (jenis === 'kuis' ? 'Kuis' : 'Ujian');
-  var s = ambilAtauBuat(nama, KOLOM_NILAI);
-  // NIS dan kode berformat teks agar angka 0 di depan tidak hilang.
-  s.getRange('B:B').setNumberFormat('@');
-  s.getRange('E:E').setNumberFormat('@');
-  s.getRange('U:U').setNumberFormat('@');
+  var n = slotSoal(jenis);
+  var s = ambilAtauBuat(namaSheetNilai(kelas, jenis), kolomNilai(n));
+  // NIS, kode sesi, dan kode konfirmasi berformat teks agar angka 0 di depan
+  // tidak hilang. Kolom konfirmasi letaknya bergeser mengikuti jumlah soal.
+  var tinggi = s.getMaxRows();
+  s.getRange(1, 2, tinggi).setNumberFormat('@');
+  s.getRange(1, 5, tinggi).setNumberFormat('@');
+  s.getRange(1, posisiKolom(n).konfirmasi + 1, tinggi).setNumberFormat('@');
   return s;
 }
 
@@ -554,13 +601,14 @@ function tulisBarisNilai(b, nilai, lulusTotal, testTotal, perSoal, konfirmasi) {
   kunci.waitLock(30000);
   try {
     var sheet = sheetNilai(b.kelas, b.jenis);
+    var n = slotSoal(b.jenis);
     var baris = [
       new Date(), String(b.nis), b.nama, b.paket, String(b.sesi),
       nilai, lulusTotal + '/' + testTotal
     ];
-    for (var i = 0; i < 10; i++) baris.push(perSoal[i] ? perSoal[i].nilai : '');
+    for (var i = 0; i < n; i++) baris.push(perSoal[i] ? perSoal[i].nilai : '');
     baris.push(b.durasiMenit, b.pindahTab, b.status, konfirmasi);
-    for (var k = 0; k < 10; k++) baris.push(b.jawaban[k] ? b.jawaban[k].kode : '');
+    for (var k = 0; k < n; k++) baris.push(b.jawaban[k] ? b.jawaban[k].kode : '');
 
     // Submisi ulang (NIS + paket + sesi sama) MENIMPA baris lama (PRD §11).
     var data = sheet.getDataRange().getValues();
@@ -644,6 +692,7 @@ function siapkanSpreadsheet() {
   for (var i = 0; i < KELAS.length; i++) {
     sheetNilai(KELAS[i], 'ujian');
     sheetNilai(KELAS[i], 'kuis');
+    sheetNilai(KELAS[i], 'termquiz');
   }
   ambilAtauBuat('_Bank', KOLOM_BANK);
   sheetSesi();

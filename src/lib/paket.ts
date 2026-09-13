@@ -32,6 +32,15 @@ export const PAKET: DefinisiPaket[] = [
     durasiMenit: 90,
     posisi: ['u1-p3', 'u2-p3', 'u3-p2', 'u4-p2', 'u4-p5', 'u5-p1', 'u6-p1', 'u6-p3', 'u7-p2', 'u7-p4'],
   },
+  {
+    paket: 'pra-term',
+    judul: 'Pra-Term Quiz',
+    subjudul: 'Unit 1–3 · 20 soal berbahasa Inggris',
+    jenis: 'termquiz',
+    durasiMenit: 70,
+    // U1 (tq-p1..6) → U2 (tq-p7..13) → U3 (tq-p14..20), mudah → sulit di tiap unit.
+    posisi: Array.from({ length: 20 }, (_, i) => `tq-p${i + 1}`),
+  },
   { paket: 'kuis-u1', judul: 'Kuis Unit 1', subjudul: 'Variabel & Tipe Data', jenis: 'kuis', durasiMenit: 20,
     posisi: ['u1-p1', 'u1-p2', 'u1-p3', 'u1-p4', 'u1-p5'] },
   { paket: 'kuis-u2', judul: 'Kuis Unit 2', subjudul: 'Operator & I/O', jenis: 'kuis', durasiMenit: 20,
@@ -49,3 +58,10 @@ export const PAKET: DefinisiPaket[] = [
 ];
 
 export const PAKET_BY_ID = new Map(PAKET.map((p) => [p.paket, p]));
+
+/** Nama sheet nilai per jenis penilaian, mis. "XA — Term Quiz" (sama dengan Code.gs). */
+export const NAMA_SHEET_JENIS: Record<JenisPenilaian, string> = {
+  ujian: 'Ujian',
+  kuis: 'Kuis',
+  termquiz: 'Term Quiz',
+};

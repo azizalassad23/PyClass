@@ -31,7 +31,8 @@ export function Ujian() {
 function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   const navigate = useNavigate();
   const { identitas, paket } = keadaanAwal;
-  const kuis = paket.jenis === 'kuis';
+  // Kuis unit dan Pra-Term Quiz sama-sama menampilkan nama paketnya di header.
+  const kuis = paket.jenis !== 'ujian';
   const kunciSesi = `${identitas.sesi}:${identitas.nis}`;
 
   const [jawaban, setJawaban] = useState<Record<string, string>>(keadaanAwal.jawaban);

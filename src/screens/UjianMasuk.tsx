@@ -103,8 +103,8 @@ export function UjianMasuk() {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
-          <Fakta besar="10" judul="soal pemrograman" ket="diacak dari bank soal setara (kuis: 5 soal)" />
-          <Fakta besar="90" judul="menit" ket="timer tetap jalan meski halaman di-refresh (kuis: 20 menit)" />
+          <Fakta besar="10" judul="soal pemrograman" ket="diacak dari bank soal setara (kuis unit: 5 · Pra-Term Quiz: 20)" />
+          <Fakta besar="90" judul="menit" ket="timer tetap jalan meski halaman di-refresh (kuis unit: 20 · Pra-Term Quiz: 70)" />
           <Fakta besar="✓" judul="jawaban tersimpan otomatis" ket="setiap 10 detik di perangkat ini" />
         </div>
       </section>

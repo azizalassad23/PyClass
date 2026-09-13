@@ -6,7 +6,7 @@ import {
   ambilRekap, bukaSesi, MODE_DEMO, sesiKelas, tutupSesi, verifikasiPin,
 } from '../lib/api';
 import { angkaId, jam, sejakDetik, tanggalPanjang } from '../lib/format';
-import { PAKET } from '../lib/paket';
+import { NAMA_SHEET_JENIS, PAKET } from '../lib/paket';
 import { KELAS_LIST, type BarisRekap, type Kelas, type SesiInfo } from '../lib/types';
 import { baca, tulis } from '../lib/storage';
 
@@ -324,7 +324,7 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: 19, margin: 0 }}>Rekap nilai</h2>
               <span style={{ fontSize: 12.5, color: 'var(--muted-2)' }}>
-                dimuat dari sheet <b>{kelas} — {sesi?.jenis === 'kuis' ? 'Kuis' : 'Ujian'}</b> · diperbarui {sejakDetik(dimuatPada)}
+                dimuat dari sheet <b>{kelas} — {NAMA_SHEET_JENIS[sesi?.jenis ?? 'ujian']}</b> · diperbarui {sejakDetik(dimuatPada)}
               </span>
             </div>
             <div className="tabel__gulir">

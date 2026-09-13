@@ -149,6 +149,13 @@ lebih baik gagal terbit daripada baru ketahuan saat kelas sudah dimulai.
 Susunan kolom `_Bank` mengikuti PRD §17. Beberapa test dalam satu sel dipisah
 tanda `|`, jadi jangan memakai karakter itu di dalam isi soal.
 
+**Pra-Term Quiz** (paket `pra-term`, jenis `termquiz`) memakai 20 soal berbahasa
+Inggris dari Unit 1–3 (`tq-01`…`tq-20`, grup `tq-p1`…`tq-p20`), 70 menit, dan dicatat
+di sheet `<Kelas> — Term Quiz`. Susunan sheet nilai dibentuk `kolomNilai(n)` di
+`Code.gs`: n = 10 untuk Ujian dan Kuis (identik dengan susunan lama, jadi sheet yang
+sudah berisi data tidak berubah), n = 20 untuk Term Quiz. Kolom sesudah blok nilai
+soal bergeser mengikuti n, sehingga pembacaannya selalu lewat `posisiKolom(n)`.
+
 Saat sesi dibuka, Apps Script hanya mengirim deskripsi, test contoh, dan
 **input** test tersembunyi. Browser menjalankan kode murid lalu mengirim balik
 **keluarannya**; pencocokan dan perhitungan nilai terjadi di server.

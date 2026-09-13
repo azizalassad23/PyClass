@@ -4,7 +4,9 @@ export type Kelas = 'XA' | 'XB' | 'XC' | 'XD';
 export const KELAS_LIST: Kelas[] = ['XA', 'XB', 'XC', 'XD'];
 
 /** `ujian` = UTS/UAS (10 soal / 90 menit). `kuis` = kuis unit (5 soal / 20 menit). */
-export type JenisPenilaian = 'ujian' | 'kuis';
+// `termquiz` = Pra-Term Quiz (20 soal / 70 menit, U1–U3, berbahasa Inggris).
+// Jenis menentukan sheet nilainya: "XA — Ujian", "XA — Kuis", "XA — Term Quiz".
+export type JenisPenilaian = 'ujian' | 'kuis' | 'termquiz';
 
 export interface TestContoh {
   input: string;
