@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ambilPantau, tambahWaktu } from '../lib/api';
+import { ambilPantau, bukaBlokir, tambahWaktu } from '../lib/api';
 import { mmss, sejakDetik } from '../lib/format';
 import type { BarisPantau } from '../lib/types';
 
@@ -14,7 +14,7 @@ const AMBANG_HILANG_DETIK = 150;
  * melewatkan yang diam-diam menyerah.
  */
 function alasanBantuan(b: BarisPantau): string | null {
-  if (b.status === 'mengirim') return null;
+  if (b.status === 'mengirim' || b.status === 'diblokir') return null;
   if (b.jalanSoalAktif >= 12 && b.detikSoalAktif >= 240) {
     return `menjalankan kode ${b.jalanSoalAktif}× di soal ${b.soalAktif} tanpa lolos contoh`;
   }
@@ -51,10 +51,10 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
     return () => window.clearInterval(id);
   }, [muat, otomatis]);
 
-  const beriWaktu = async (nis: string, menit: number) => {
+  const jalankanAksi = async (nis: string, aksi: () => Promise<unknown>) => {
     setSibukNis(nis);
     try {
-      await tambahWaktu(pin, sesi, nis, menit);
+      await aksi();
       await muat();
     } catch (e) {
       setGalat((e as Error).message);
@@ -63,8 +63,19 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
     }
   };
 
+  const beriWaktu = (nis: string, menit: number) =>
+    jalankanAksi(nis, () => tambahWaktu(pin, sesi, nis, menit));
+
+  const lepasBlokir = (b: BarisPantau) => {
+    const setuju = window.confirm(
+      `Buka blokir ${b.nama}?\n\nSesuai aturan, seluruh jawabannya tetap dikosongkan dan ia mulai lagi dari soal 1.`,
+    );
+    if (setuju) void jalankanAksi(b.nis, () => bukaBlokir(pin, sesi, b.nis));
+  };
+
   const butuhBantuan = baris.filter((b) => alasanBantuan(b) !== null);
   const sudahKirim = baris.filter((b) => b.status === 'mengirim').length;
+  const diblokir = baris.filter((b) => b.status === 'diblokir').length;
   const sekarang = Date.now();
 
   return (
@@ -77,7 +88,9 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
       >
         <h2 style={{ fontSize: 19, margin: 0 }}>Papan pantau kelas</h2>
         <span style={{ fontSize: 12.5, color: 'var(--muted-2)' }}>
-          {baris.length} murid terpantau · {sudahKirim} sudah mengirim · diperbarui {sejakDetik(dimuatPada)}
+          {baris.length} murid terpantau · {sudahKirim} sudah mengirim
+          {diblokir > 0 && <b style={{ color: 'var(--brand-deep)' }}> · {diblokir} diblokir</b>} · diperbarui{' '}
+          {sejakDetik(dimuatPada)}
         </span>
         <span style={{ flex: 1 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--muted)' }}>
@@ -134,10 +147,14 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
             ) : (
               baris.map((b) => {
                 const alasan = alasanBantuan(b);
+                const terblokir = b.status === 'diblokir';
                 const diamDetik = b.diperbaruiPada ? Math.round((sekarang - b.diperbaruiPada) / 1000) : null;
                 const hilang = diamDetik !== null && diamDetik > AMBANG_HILANG_DETIK;
+                const sisaBlokirMenit = b.diblokirSampai
+                  ? Math.max(0, Math.ceil((b.diblokirSampai - sekarang) / 60_000))
+                  : null;
                 return (
-                  <tr key={b.nis} style={{ background: alasan ? 'var(--brand-wash)' : undefined }}>
+                  <tr key={b.nis} style={{ background: alasan || terblokir ? 'var(--brand-wash)' : undefined }}>
                     <td>
                       <b>{b.nama}</b>
                       <div style={{ fontSize: 11.5, color: 'var(--muted-2)', fontFamily: 'var(--mono)' }}>{b.nis}</div>
@@ -158,12 +175,27 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
                         </span>
                       )}
                     </td>
-                    <td style={{ fontWeight: b.pindahTab > 2 ? 700 : 400, color: b.pindahTab > 2 ? 'var(--brand-deep)' : 'var(--muted-2)' }}>
+                    <td style={{ fontWeight: b.pindahTab > 1 ? 700 : 400, color: b.pindahTab > 1 ? 'var(--brand-deep)' : 'var(--muted-2)' }}>
                       {b.pindahTab}
                     </td>
                     <td>
                       {b.status === 'mengirim' ? (
                         <span className="pill pill--leaf">mengirim</span>
+                      ) : terblokir ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                          <span className="pill pill--brand" title="Keluar dari halaman ujian lebih dari sekali">
+                            diblokir{sisaBlokirMenit !== null ? ` · ${sisaBlokirMenit} m lagi` : ''}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn--ghost btn--sm"
+                            style={{ minHeight: 30, padding: '4px 10px', fontSize: 12 }}
+                            onClick={() => lepasBlokir(b)}
+                            disabled={sibukNis !== null}
+                          >
+                            Buka blokir
+                          </button>
+                        </div>
                       ) : hilang ? (
                         <span className="pill pill--brand" title={`Kabar terakhir ${diamDetik} detik lalu`}>
                           terputus?
@@ -197,8 +229,10 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
       </div>
 
       <p style={{ fontSize: 12.5, color: 'var(--muted-2)', padding: '14px 20px', margin: 0, borderTop: '1px solid var(--line)' }}>
-        Murid mengirim kabar tiap 45 detik, jadi angka di sini bisa tertinggal sekitar satu menit. Durasi
-        sesi ini {durasiMenit} menit; tambahan waktu sampai ke murid pada kabar berikutnya.
+        Murid mengirim kabar tiap 45 detik (tiap 15 detik saat diblokir), jadi angka di sini bisa tertinggal
+        sekitar satu menit. Durasi sesi ini {durasiMenit} menit. Murid yang keluar dari halaman ujian lebih
+        dari sekali diblokir — kuis unit 10 menit, lainnya 30 menit — dan jawabannya dikosongkan saat blokir
+        berakhir, termasuk bila dibuka lebih awal oleh guru. Keluar lagi saat diblokir memulai ulang hitungannya.
       </p>
     </section>
   );

@@ -5,7 +5,7 @@ import { KonsolPython } from '../components/KonsolPython';
 import { PanelEditor } from '../components/PanelEditor';
 import { kirimDenganUlangan, kirimDenyut } from '../lib/api';
 import { mmss, normalisasiKeluaran, sejakDetik } from '../lib/format';
-import { useAntiCheat, useJejakSoal } from '../lib/useAntiCheat';
+import { durasiBlokirMenit, useAntiCheat, useJejakSoal } from '../lib/useAntiCheat';
 import { menitTerpakai, useTimer } from '../lib/useTimer';
 import {
   muatHasil, muatUjianAktif, simpanHasil, simpanJawaban, type KeadaanUjian,
@@ -15,6 +15,7 @@ import { useRunner, useRunnerBatch } from '../python/useRunner';
 import { usePython } from '../python/PythonProvider';
 
 type HasilTest = { input: string; harap: string; dapat: string; cocok: boolean; galat: string };
+type StatusKirim = SubmitPayload['status'];
 
 /** W4 — mockup 1g (ujian) dan 1k (kuis, versi ringkas dari alur yang sama). */
 export function Ujian() {
@@ -34,6 +35,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   // Kuis unit dan Pra-Term Quiz sama-sama menampilkan nama paketnya di header.
   const kuis = paket.jenis !== 'ujian';
   const kunciSesi = `${identitas.sesi}:${identitas.nis}`;
+  const durasiBlokir = durasiBlokirMenit(paket.jenis);
 
   const [jawaban, setJawaban] = useState<Record<string, string>>(keadaanAwal.jawaban);
   const [indeks, setIndeks] = useState(0);
@@ -43,6 +45,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   const [progresKirim, setProgresKirim] = useState('');
   const [galatKirim, setGalatKirim] = useState('');
   const [konfirmasiKirim, setKonfirmasiKirim] = useState(false);
+  const [pesanReset, setPesanReset] = useState(false);
 
   const soal = paket.soal[indeks];
   const jalankanTest = useRunnerBatch();
@@ -50,16 +53,41 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   // dimau, dengan masukan bebas — ini tidak dinilai dan tidak dikirim ke mana pun.
   const { keadaan: keadaanBebas, mulai: mulaiBebas, balasInput, bersihkan: bersihkanKonsol } = useRunner();
   const { fase, panaskan, sedangJalan } = usePython();
-  const { pindahTab, peringatan, tutupPeringatan } = useAntiCheat(kunciSesi, !mengirim);
+
+  /**
+   * Dipanggil saat blokir anti-cheat berakhir — habis waktunya atau dibuka guru.
+   * Seluruh jawaban kembali ke kode awal dan murid mulai lagi dari soal 1.
+   * Langsung disimpan supaya refresh tidak menghidupkan jawaban lama.
+   */
+  const resetProgres = useCallback(() => {
+    const kosong = Object.fromEntries(paket.soal.map((s) => [s.id, s.kodeAwal ?? '']));
+    setJawaban(kosong);
+    simpanJawaban(identitas.sesi, identitas.nis, kosong);
+    setHasilTest({});
+    setIndeks(0);
+    setKonfirmasiKirim(false);
+    bersihkanKonsol();
+    setPesanReset(true);
+  }, [paket.soal, identitas.sesi, identitas.nis, bersihkanKonsol]);
+
+  const {
+    pindahTab, peringatan, tutupPeringatan, diblokirSampai, sisaBlokirDetik, terimaBukaBlokir,
+  } = useAntiCheat({
+    kunci: kunciSesi,
+    aktif: !mengirim,
+    durasiBlokirMenit: durasiBlokir,
+    onBlokirSelesai: resetProgres,
+  });
+  const diblokir = diblokirSampai !== null;
   const { jejak, masukSoal, catatJalan } = useJejakSoal(kunciSesi);
   // Tambahan waktu dari guru datang lewat balasan denyut (F-G06).
   const [tambahanMenit, setTambahanMenit] = useState(0);
   const { sisaDetik, habis, peringatan: peringatanWaktu, mulaiPada, hapusTimer } =
     useTimer(kunciSesi, paket.durasiMenit, !mengirim, tambahanMenit);
 
-  const kirimRef = useRef<(status: 'selesai' | 'waktu-habis') => void>(() => undefined);
+  const kirimRef = useRef<(status: StatusKirim) => void>(() => undefined);
 
-  // Cermin dari state yang dibaca denyut. Tanpa ini, interval 45 detik harus
+  // Cermin dari state yang dibaca denyut. Tanpa ini, interval denyut harus
   // dibuat ulang setiap ketikan murid — dan denyutnya tidak pernah sempat jalan.
   const indeksRef = useRef(indeks);
   const jawabanRef = useRef(jawaban);
@@ -67,6 +95,8 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   const jejakRef = useRef(jejak);
   const pindahTabRef = useRef(pindahTab);
   const sisaDetikRef = useRef(sisaDetik);
+  const diblokirSampaiRef = useRef(diblokirSampai);
+  const terimaBukaBlokirRef = useRef(terimaBukaBlokir);
   const masukSoalPadaRef = useRef(Date.now());
   const dikerjakanRef = useRef<(s: { id: string; kodeAwal?: string }, kode: string) => boolean>(() => false);
   indeksRef.current = indeks;
@@ -75,6 +105,8 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   jejakRef.current = jejak;
   pindahTabRef.current = pindahTab;
   sisaDetikRef.current = sisaDetik;
+  diblokirSampaiRef.current = diblokirSampai;
+  terimaBukaBlokirRef.current = terimaBukaBlokir;
 
   useEffect(() => { masukSoalPadaRef.current = Date.now(); }, [indeks]);
 
@@ -90,15 +122,17 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
     return () => window.clearInterval(id);
   }, [jawaban, identitas.sesi, identitas.nis]);
 
-  // F-U02 — auto-submit saat waktu habis.
+  // F-U02 — auto-submit saat waktu habis. Bila saat itu murid masih diblokir,
+  // progresnya dianggap hangus dan terkirim dengan nilai 0.
   useEffect(() => {
-    if (habis && !mengirim) kirimRef.current('waktu-habis');
-  }, [habis, mengirim]);
+    if (habis && !mengirim) kirimRef.current(diblokir ? 'diblokir' : 'waktu-habis');
+  }, [habis, mengirim, diblokir]);
 
   /**
-   * Denyut ke guru tiap 45 detik: mengabarkan progres, sekaligus menjemput
-   * tambahan waktu. Sengaja tidak sesering autosave — 36 murid yang berdenyut
-   * bersamaan sudah cukup membebani Apps Script.
+   * Denyut ke guru: mengabarkan progres, sekaligus menjemput tambahan waktu dan
+   * pembukaan blokir. Normalnya tiap 45 detik — 36 murid yang berdenyut
+   * bersamaan sudah cukup membebani Apps Script. Saat diblokir dipercepat ke 15
+   * detik supaya guru segera melihatnya dan pembukaan blokir cepat sampai.
    *
    * Kegagalan diabaikan diam-diam: ini fitur pengawasan, bukan bagian dari
    * pengerjaan. Ujian harus tetap jalan walau papan pantau mati.
@@ -109,6 +143,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
 
     const berdenyut = async () => {
       try {
+        const sampai = diblokirSampaiRef.current;
         const hasil = await kirimDenyut({
           sesi: identitas.sesi,
           kelas: identitas.kelas,
@@ -124,18 +159,21 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
           detikSoalAktif: Math.round((Date.now() - masukSoalPadaRef.current) / 1000),
           pindahTab: pindahTabRef.current,
           sisaDetik: sisaDetikRef.current,
-          status: 'mengerjakan',
+          status: sampai !== null ? 'diblokir' : 'mengerjakan',
+          diblokirSampai: sampai,
         });
-        if (!batal && hasil.tambahanMenit > 0) setTambahanMenit(hasil.tambahanMenit);
+        if (batal) return;
+        if (hasil.tambahanMenit > 0) setTambahanMenit(hasil.tambahanMenit);
+        terimaBukaBlokirRef.current(hasil.bukaBlokirKe);
       } catch {
         /* papan pantau sedang tidak bisa dihubungi — abaikan */
       }
     };
 
     void berdenyut();
-    const id = window.setInterval(() => void berdenyut(), 45_000);
+    const id = window.setInterval(() => void berdenyut(), diblokir ? 15_000 : 45_000);
     return () => { batal = true; window.clearInterval(id); };
-  }, [mengirim, identitas, paket.soal]);
+  }, [mengirim, identitas, paket.soal, diblokir]);
 
   // Konsol dikosongkan saat pindah soal agar keluaran soal lain tidak tertinggal.
   useEffect(() => { bersihkanKonsol(); }, [soal.id, bersihkanKonsol]);
@@ -171,18 +209,29 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   };
 
   const kirim = useCallback(
-    async (status: 'selesai' | 'waktu-habis') => {
+    async (status: StatusKirim) => {
       setMengirim(true);
       setGalatKirim('');
-      simpanJawaban(identitas.sesi, identitas.nis, jawaban);
+
+      // Waktu habis saat masih diblokir: progres hangus. Jawaban dikembalikan ke
+      // kode awal, tidak ada kode yang dijalankan, dan server memaksa nilainya 0.
+      const hangus = status === 'diblokir';
+      const jawabanKirim = hangus
+        ? Object.fromEntries(paket.soal.map((s) => [s.id, s.kodeAwal ?? '']))
+        : jawaban;
+      simpanJawaban(identitas.sesi, identitas.nis, jawabanKirim);
 
       // F-U05 — browser hanya menghasilkan KELUARAN; pencocokan dengan kunci
       // dilakukan di Apps Script. Kunci tidak pernah ada di perangkat murid.
       const terkirim: JawabanTerkirim[] = [];
       for (let i = 0; i < paket.soal.length; i++) {
         const s = paket.soal[i];
+        const kode = jawabanKirim[s.id] ?? '';
+        if (hangus) {
+          terkirim.push({ soalId: s.id, output: [], kode });
+          continue;
+        }
         setProgresKirim(`Menjalankan kode untuk soal ${i + 1} dari ${paket.soal.length}…`);
-        const kode = jawaban[s.id] ?? '';
         const keluaran: string[] = [];
         for (const input of s.inputTersembunyi) {
           const { keluaran: out } = await jalankanTest(kode, input);
@@ -256,6 +305,17 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
           {galatKirim && <p style={{ color: 'var(--brand-deep)', fontSize: 13.5 }}>{galatKirim}</p>}
         </div>
       </main>
+    );
+  }
+
+  if (diblokir) {
+    return (
+      <LayarBlokir
+        judul={paket.judul}
+        sisaBlokirDetik={sisaBlokirDetik}
+        durasiBlokir={durasiBlokir}
+        sisaUjianDetik={sisaDetik}
+      />
     );
   }
 
@@ -336,7 +396,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
         </div>
       )}
 
-      {(peringatan || peringatanWaktu) && (
+      {(pesanReset || peringatan || peringatanWaktu) && (
         <div
           role="alert"
           style={{
@@ -347,12 +407,20 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
         >
           <strong aria-hidden="true">!</strong>
           <span style={{ flex: 1 }}>
-            {peringatanWaktu
-              ? `Sisa waktu ${peringatanWaktu} menit. Pastikan jawabanmu sudah tersimpan.`
-              : peringatan}
+            {pesanReset
+              ? 'Blokir sudah berakhir. Sesuai aturan, seluruh jawabanmu dikosongkan — mulai lagi dari soal 1. Keluar lagi dari halaman ini akan langsung memblokirmu kembali.'
+              : peringatanWaktu
+                ? `Sisa waktu ${peringatanWaktu} menit. Pastikan jawabanmu sudah tersimpan.`
+                : peringatan}
           </span>
-          {peringatan && (
-            <button type="button" className="btn btn--ghost btn--sm" onClick={tutupPeringatan}>Mengerti</button>
+          {(pesanReset || peringatan) && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => { setPesanReset(false); tutupPeringatan(); }}
+            >
+              Mengerti
+            </button>
           )}
         </div>
       )}
@@ -438,7 +506,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
             blokirTempel
             catatanJudul={
               <span style={{ fontSize: 10.5, color: 'var(--muted-2)', fontFamily: 'var(--sans)' }}>
-                Tempel dinonaktifkan
+                Salin &amp; tempel dinonaktifkan
               </span>
             }
             aksiTambahan={
@@ -498,14 +566,62 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   );
 }
 
+/**
+ * Pengganti layar ujian selama diblokir. Editor sama sekali tidak dirender,
+ * jadi tidak ada yang bisa dikerjakan sampai blokir berakhir.
+ */
+function LayarBlokir({ judul, sisaBlokirDetik, durasiBlokir, sisaUjianDetik }: {
+  judul: string;
+  sisaBlokirDetik: number;
+  durasiBlokir: number;
+  sisaUjianDetik: number;
+}) {
+  return (
+    <main
+      data-ujian
+      style={{
+        minHeight: '100vh', background: 'var(--cream)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div role="alert" style={{ maxWidth: 540, textAlign: 'center' }}>
+        <span className="pill pill--brand" style={{ marginBottom: 16, fontSize: 12.5, padding: '7px 14px' }}>
+          Pengerjaan diblokir
+        </span>
+        <h1 style={{ fontSize: 'clamp(26px, 4vw, 34px)', lineHeight: 1.15, margin: '0 0 8px' }}>
+          Kamu keluar dari halaman ujian lebih dari sekali
+        </h1>
+        <div
+          aria-label="Sisa waktu blokir"
+          style={{
+            fontFamily: 'var(--mono)', fontSize: 'clamp(48px, 10vw, 72px)', fontWeight: 700,
+            color: 'var(--brand-deep)', lineHeight: 1.1, margin: '18px 0',
+          }}
+        >
+          {mmss(sisaBlokirDetik)}
+        </div>
+        <p style={{ fontSize: 15.5, lineHeight: 1.65, color: 'var(--body)', margin: '0 0 12px' }}>
+          Setelah hitungan ini habis, seluruh jawabanmu dikosongkan dan kamu mulai lagi dari soal 1.{' '}
+          <b>Tetap di halaman ini</b> — keluar lagi saat diblokir memulai ulang hitungan dari {durasiBlokir} menit.
+        </p>
+        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--muted)', margin: '0 0 12px' }}>
+          Timer {judul} tetap berjalan: sisa{' '}
+          <b style={{ fontFamily: 'var(--mono)' }}>{mmss(sisaUjianDetik)}</b>. Kalau waktunya habis saat kamu masih
+          diblokir, pengerjaanmu terkirim dengan nilai 0.
+        </p>
+        <p style={{ fontSize: 12.5, color: 'var(--muted-2)', margin: 0 }}>
+          Guru melihat bahwa kamu sedang diblokir dan dapat membukanya lebih awal.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 function KotakContoh({ label, isi }: { label: string; isi: string }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', padding: '10px 14px' }}>
       <div className="eyebrow" style={{ fontSize: 10, marginBottom: 4 }}>{label}</div>
-      <pre
-        data-boleh-salin
-        style={{ margin: 0, fontSize: 13.5, whiteSpace: 'pre-wrap', color: 'var(--ink)' }}
-      >
+      <pre style={{ margin: 0, fontSize: 13.5, whiteSpace: 'pre-wrap', color: 'var(--ink)' }}>
         {isi === '' ? '(kosong)' : isi}
       </pre>
     </div>

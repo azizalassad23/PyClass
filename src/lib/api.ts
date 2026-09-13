@@ -56,9 +56,20 @@ export async function kirimJawaban(p: SubmitPayload): Promise<HasilPenilaian> {
  * diberikan guru, jadi satu permintaan melayani dua arah sekaligus.
  * Kegagalan di sini TIDAK boleh mengganggu ujian — pemanggil mengabaikannya.
  */
-export async function kirimDenyut(d: Denyut): Promise<{ tambahanMenit: number }> {
+export async function kirimDenyut(d: Denyut): Promise<{ tambahanMenit: number; bukaBlokirKe: number }> {
   if (MODE_DEMO) return demo.denyut(d);
-  return post<{ tambahanMenit: number }>('denyut', d);
+  const data = await post<{ tambahanMenit: number; bukaBlokirKe?: number }>('denyut', d);
+  // Code.gs versi lama belum mengirim bukaBlokirKe; anggap guru belum pernah membuka blokir.
+  return { tambahanMenit: data.tambahanMenit ?? 0, bukaBlokirKe: data.bukaBlokirKe ?? 0 };
+}
+
+/** Guru mengakhiri blokir seorang murid lebih awal; progres murid tetap direset. */
+export async function bukaBlokir(pin: string, sesi: string, nis: string): Promise<void> {
+  if (MODE_DEMO) {
+    if (!demo.bukaBlokir(sesi, nis)) throw new ApiError('Murid itu tidak ditemukan di papan pantau.');
+    return;
+  }
+  await post('bukaBlokir', { pin, sesi, nis });
 }
 
 export async function ambilPantau(pin: string, sesi: string): Promise<BarisPantau[]> {

@@ -51,14 +51,17 @@ var KOLOM_LOG = ['Waktu', 'Jenis', 'Keterangan'];
 /**
  * Papan pantau ujian yang sedang berjalan. Isinya sementara dan boleh dihapus
  * kapan saja — nilai yang sah tetap ada di sheet kelas.
- * Kolom N (Tambahan Menit) HANYA ditulis guru; denyut murid tidak menyentuhnya.
+ * Kolom N (Tambahan Menit) dan Q (Buka Blokir) HANYA ditulis guru; denyut murid
+ * tidak menyentuhnya. Kolom P (Diblokir Sampai) ditulis denyut murid.
  */
 var KOLOM_PROGRES = [
   'Kode Sesi', 'Kelas', 'NIS', 'Nama', 'Soal Aktif', 'Total Soal', 'Diisi',
   'Lulus Contoh', 'Jalan di Soal Ini', 'Detik di Soal Ini', 'Pindah Tab',
-  'Sisa Detik', 'Status', 'Tambahan Menit', 'Diperbarui'
+  'Sisa Detik', 'Status', 'Tambahan Menit', 'Diperbarui', 'Diblokir Sampai', 'Buka Blokir'
 ];
-var KOL_TAMBAHAN = 14; // kolom N, 1-based
+var KOL_TAMBAHAN = 14;    // kolom N, 1-based — ditulis guru
+var KOL_DIBLOKIR = 16;    // kolom P — ditulis denyut murid
+var KOL_BUKA_BLOKIR = 17; // kolom Q — ditulis guru, dibaca denyut murid
 
 // ─────────────────────────────── Router ───────────────────────────────
 
@@ -95,6 +98,7 @@ function doPost(e) {
       case 'bukaSesi':    return json(aksiBukaSesi(badan));
       case 'tutupSesi':   return json(aksiTutupSesi(badan));
       case 'tambahWaktu': return json(aksiTambahWaktu(badan));
+      case 'bukaBlokir':  return json(aksiBukaBlokir(badan));
       default:          return json({ ok: false, pesan: 'Aksi tidak dikenal: ' + aksi });
     }
   } catch (err) {
@@ -185,9 +189,13 @@ function aksiNilai(b) {
     }
     var kunci = soal.outputKunci;
     var lulus = 0;
-    for (var k = 0; k < kunci.length; k++) {
-      var keluaran = (jw.output && jw.output[k]) || '';
-      if (normalisasi(keluaran) === normalisasi(kunci[k])) lulus++;
+    // Waktu habis saat murid masih diblokir anti-cheat: progres dianggap hangus.
+    // Nilai dipaksa 0, termasuk soal yang kuncinya kebetulan keluaran kosong.
+    if (b.status !== 'diblokir') {
+      for (var k = 0; k < kunci.length; k++) {
+        var keluaran = (jw.output && jw.output[k]) || '';
+        if (normalisasi(keluaran) === normalisasi(kunci[k])) lulus++;
+      }
     }
     var nilaiSoal = kunci.length === 0 ? 0 : Math.round((lulus / kunci.length) * 100);
     perSoal.push({ soalId: soal.id, judul: soal.judul, lulus: lulus, total: kunci.length, nilai: nilaiSoal });
@@ -237,7 +245,7 @@ function aksiDenyut(b) {
 
   var kunci = LockService.getScriptLock();
   if (!kunci.tryLock(5000)) {
-    return { ok: true, dilewati: true, tambahanMenit: 0 };
+    return { ok: true, dilewati: true, tambahanMenit: 0, bukaBlokirKe: 0 };
   }
   try {
     var sheet = sheetProgres();
@@ -250,16 +258,23 @@ function aksiDenyut(b) {
       Number(b.sisaDetik) || 0, b.status || 'mengerjakan'
     ];
 
+    var diblokir = b.diblokirSampai ? new Date(Number(b.diblokirSampai)) : '';
     for (var r = 1; r < data.length; r++) {
       if (String(data[r][0]) === String(b.sesi) && String(data[r][2]) === String(b.nis)) {
-        // Kolom A–M diperbarui; N (Tambahan Menit) milik guru, jangan disentuh.
+        // Kolom A–M dan P milik denyut; N (Tambahan Menit) dan Q (Buka Blokir)
+        // milik guru, jangan disentuh.
         sheet.getRange(r + 1, 1, 1, baris.length).setValues([baris]);
         sheet.getRange(r + 1, KOL_TAMBAHAN + 1).setValue(new Date());
-        return { ok: true, tambahanMenit: Number(data[r][KOL_TAMBAHAN - 1]) || 0 };
+        sheet.getRange(r + 1, KOL_DIBLOKIR).setValue(diblokir);
+        return {
+          ok: true,
+          tambahanMenit: Number(data[r][KOL_TAMBAHAN - 1]) || 0,
+          bukaBlokirKe: Number(data[r][KOL_BUKA_BLOKIR - 1]) || 0
+        };
       }
     }
-    sheet.appendRow(baris.concat([0, new Date()]));
-    return { ok: true, tambahanMenit: 0 };
+    sheet.appendRow(baris.concat([0, new Date(), diblokir, 0]));
+    return { ok: true, tambahanMenit: 0, bukaBlokirKe: 0 };
   } finally {
     kunci.releaseLock();
   }
@@ -354,7 +369,8 @@ function aksiPantau(p) {
       sisaDetik: Number(data[r][11]) || 0,
       status: data[r][12],
       tambahanMenit: Number(data[r][13]) || 0,
-      diperbaruiPada: data[r][14] ? new Date(data[r][14]).getTime() : null
+      diperbaruiPada: data[r][14] ? new Date(data[r][14]).getTime() : null,
+      diblokirSampai: data[r][KOL_DIBLOKIR - 1] ? new Date(data[r][KOL_DIBLOKIR - 1]).getTime() : null
     });
   }
   baris.sort(function (a, b) { return a.nama < b.nama ? -1 : 1; });
@@ -386,6 +402,27 @@ function aksiTambahWaktu(b) {
   }
   catatLog('waktu', 'Sesi ' + b.sesi + ' — ' + b.nis + ' ditambah ' + menit + ' menit (' + kena + ' baris)');
   return { ok: true, kena: kena };
+}
+
+/**
+ * POST ?action=bukaBlokir
+ * Guru mengakhiri blokir anti-cheat seorang murid lebih awal. Yang diubah hanya
+ * nomor urut di kolom Q; murid membandingkannya dengan miliknya pada denyut
+ * berikutnya lalu mengakhiri blokir — dan jawabannya tetap dikosongkan.
+ */
+function aksiBukaBlokir(b) {
+  pastikanPin(b.pin);
+  var sheet = sheetProgres();
+  var data = sheet.getDataRange().getValues();
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][0]) === String(b.sesi) && String(data[r][2]) === String(b.nis)) {
+      var ke = (Number(data[r][KOL_BUKA_BLOKIR - 1]) || 0) + 1;
+      sheet.getRange(r + 1, KOL_BUKA_BLOKIR).setValue(ke);
+      catatLog('blokir', 'Sesi ' + b.sesi + ' — blokir ' + b.nis + ' dibuka guru (ke-' + ke + ')');
+      return { ok: true, ke: ke };
+    }
+  }
+  return { ok: false, pesan: 'Murid itu belum terpantau di sesi ini.' };
 }
 
 function aksiRekap(p) {
@@ -581,7 +618,14 @@ function sheetBank() {
 }
 
 function sheetSesi()    { return ambilAtauBuat('_Sesi', KOLOM_SESI); }
-function sheetProgres() { return ambilAtauBuat('_Progres', KOLOM_PROGRES); }
+function sheetProgres() {
+  var s = ambilAtauBuat('_Progres', KOLOM_PROGRES);
+  // Sheet _Progres yang dibuat versi sebelumnya belum punya judul kolom P–Q.
+  if (s.getLastColumn() < KOLOM_PROGRES.length) {
+    s.getRange(1, 1, 1, KOLOM_PROGRES.length).setValues([KOLOM_PROGRES]).setFontWeight('bold');
+  }
+  return s;
+}
 function sheetLog()  { return ambilAtauBuat('_Log', KOLOM_LOG); }
 
 function catatLog(jenis, keterangan) {

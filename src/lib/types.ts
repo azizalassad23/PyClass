@@ -57,7 +57,8 @@ export interface SubmitPayload extends Identitas {
   jawaban: JawabanTerkirim[];
   durasiMenit: number;
   pindahTab: number;
-  status: 'selesai' | 'waktu-habis';
+  /** `diblokir` = waktu habis saat murid masih diblokir anti-cheat; nilainya dipaksa 0. */
+  status: 'selesai' | 'waktu-habis' | 'diblokir';
 }
 
 export interface HasilPenilaian {
@@ -131,7 +132,9 @@ export interface Denyut {
   detikSoalAktif: number;
   pindahTab: number;
   sisaDetik: number;
-  status: 'mengerjakan' | 'mengirim';
+  status: 'mengerjakan' | 'mengirim' | 'diblokir';
+  /** Epoch ms blokir anti-cheat berakhir; null bila tidak diblokir. */
+  diblokirSampai: number | null;
 }
 
 export interface BarisPantau {
@@ -147,5 +150,6 @@ export interface BarisPantau {
   sisaDetik: number;
   status: string;
   tambahanMenit: number;
+  diblokirSampai: number | null;
   diperbaruiPada: number | null;
 }

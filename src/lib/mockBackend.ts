@@ -168,10 +168,14 @@ export function nilaiSubmisi(p: SubmitPayload): HasilPenilaian {
     if (!soal) continue;
     const kunci = soal.outputKunci;
     let lulus = 0;
-    kunci.forEach((benar, i) => {
-      const keluaran = jawaban.output[i] ?? '';
-      if (normalisasiKeluaran(keluaran) === normalisasiKeluaran(benar)) lulus++;
-    });
+    // Waktu habis saat masih diblokir: progres dianggap hangus, nilai dipaksa 0 —
+    // termasuk soal yang kuncinya kebetulan keluaran kosong.
+    if (p.status !== 'diblokir') {
+      kunci.forEach((benar, i) => {
+        const keluaran = jawaban.output[i] ?? '';
+        if (normalisasiKeluaran(keluaran) === normalisasiKeluaran(benar)) lulus++;
+      });
+    }
     const total = kunci.length;
     const nilai = total === 0 ? 0 : Math.round((lulus / total) * 100);
     perSoal.push({ soalId: soal.id, judul: soal.judul, lulus, total, nilai });
@@ -215,12 +219,15 @@ const K_PANTAU = 'demo:pantau:';
 /** Simpanan denyut mode demo — di server ini adalah sheet `_Progres`. */
 interface BarisPantauTersimpan extends BarisPantau {
   sesi: string;
+  /** Nomor urut "buka blokir" dari guru; murid membandingkannya dengan miliknya. */
+  bukaBlokirKe: number;
 }
 
-export function denyut(d: Denyut): { tambahanMenit: number } {
+export function denyut(d: Denyut): { tambahanMenit: number; bukaBlokirKe: number } {
   const kunci = `${K_PANTAU}${d.sesi}:${d.nis}`;
   const lama = baca<BarisPantauTersimpan | null>(kunci, null);
   const tambahanMenit = lama?.tambahanMenit ?? 0;
+  const bukaBlokirKe = lama?.bukaBlokirKe ?? 0;
   tulis(kunci, {
     sesi: d.sesi,
     nis: d.nis,
@@ -234,11 +241,22 @@ export function denyut(d: Denyut): { tambahanMenit: number } {
     pindahTab: d.pindahTab,
     sisaDetik: d.sisaDetik,
     status: d.status,
-    // Tambahan menit milik guru — denyut tidak boleh menimpanya.
+    diblokirSampai: d.diblokirSampai,
+    // Tambahan menit dan buka blokir milik guru — denyut tidak boleh menimpanya.
     tambahanMenit,
+    bukaBlokirKe,
     diperbaruiPada: Date.now(),
   } satisfies BarisPantauTersimpan);
-  return { tambahanMenit };
+  return { tambahanMenit, bukaBlokirKe };
+}
+
+/** Guru mengakhiri blokir seorang murid lebih awal. */
+export function bukaBlokir(sesi: string, nis: string): boolean {
+  const kunci = `${K_PANTAU}${sesi}:${nis}`;
+  const b = baca<BarisPantauTersimpan | null>(kunci, null);
+  if (!b) return false;
+  tulis(kunci, { ...b, bukaBlokirKe: (b.bukaBlokirKe ?? 0) + 1 });
+  return true;
 }
 
 export function pantau(sesi: string): BarisPantau[] {
