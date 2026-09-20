@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gembok sederhana: ikon vektor, jadi tidak ada berkas PNG biner di repo. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FAF6F0"
+        android:pathData="M54,30c-7.2,0 -13,5.8 -13,13v6h-4c-2.2,0 -4,1.8 -4,4v22c0,2.2 1.8,4 4,4h34c2.2,0 4,-1.8 4,-4V53c0,-2.2 -1.8,-4 -4,-4h-4v-6C67,35.8 61.2,30 54,30zM54,37c3.3,0 6,2.7 6,6v6H48v-6C48,39.7 50.7,37 54,37zM54,58c2.2,0 4,1.8 4,4c0,1.5 -0.8,2.8 -2,3.4V70c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2v-4.6c-1.2,-0.7 -2,-2 -2,-3.4C50,59.8 51.8,58 54,58z" />
+</vector>

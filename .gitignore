@@ -12,3 +12,10 @@ uji.md
 # Bank soal lengkap (soal + kunci jawaban) — PRD §10: tidak pernah masuk repo publik.
 # Hanya untuk mencoba mode demo di komputer sendiri.
 src/lib/bankDemo.ts
+
+# Keluaran build Android — dibangun di GitHub Actions, bukan disimpan di repo.
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warna diambil dari situs PyClass supaya aplikasi terasa satu keluarga. -->
+    <color name="krem">#FAF6F0</color>
+    <color name="tinta">#1F1B16</color>
+    <color name="jingga">#D2601A</color>
+</resources>

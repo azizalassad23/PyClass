@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PyClass Ujian</string>
+
+    <string name="status_terkunci">Mode ujian — layar terkunci</string>
+    <string name="status_memeriksa">Memeriksa kode keluar…</string>
+    <string name="status_terbuka">Kunci dilepas</string>
+
+    <string name="tombol_keluar">Keluar</string>
+    <string name="keluar_judul">Keluar dari aplikasi ujian</string>
+    <string name="keluar_pesan">Minta guru mengetikkan kode keluar sesi ini. Kode tidak sama dengan kode sesi.</string>
+    <string name="keluar_petunjuk">6 angka</string>
+    <string name="keluar_periksa">Periksa</string>
+    <string name="keluar_batal">Batal</string>
+    <string name="keluar_enam_digit">Kode keluar terdiri dari 6 angka.</string>
+    <string name="keluar_belum_masuk">Belum ada ujian yang sedang dikerjakan di aplikasi ini.</string>
+
+    <string name="izin_judul">Izinkan Jangan Ganggu</string>
+    <string name="izin_pesan">Supaya notifikasi tidak muncul saat ujian, aplikasi perlu izin Jangan Ganggu. Izin ini hanya dipakai selama ujian berlangsung.</string>
+    <string name="izin_buka">Buka pengaturan</string>
+    <string name="izin_nanti">Nanti saja</string>
+
+    <string name="kembali_dimatikan">Tombol kembali dimatikan selama ujian.</string>
+</resources>
