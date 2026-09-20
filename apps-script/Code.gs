@@ -45,7 +45,15 @@ var KOLOM_BANK = [
   'contohInput', 'contohOutput', 'inputTersembunyi', 'outputKunci', 'kodeReferensi', 'kodeAwal'
 ];
 
-var KOLOM_SESI = ['Kode Sesi', 'Kelas', 'Paket', 'Jenis', 'Judul', 'Durasi', 'Dibuka', 'Ditutup', 'Status'];
+/**
+ * Kolom J (Kode Keluar) dipakai aplikasi Android: murid hanya boleh menutup
+ * aplikasi setelah guru mengetikkan kode ini. Kode TIDAK PERNAH dikirim ke
+ * perangkat murid — yang dikirim hanya jawaban cocok atau tidak.
+ */
+var KOLOM_SESI = [
+  'Kode Sesi', 'Kelas', 'Paket', 'Jenis', 'Judul', 'Durasi', 'Dibuka', 'Ditutup', 'Status', 'Kode Keluar'
+];
+var KOL_KODE_KELUAR = 10; // kolom J, 1-based
 var KOLOM_LOG = ['Waktu', 'Jenis', 'Keterangan'];
 
 /**
@@ -99,6 +107,8 @@ function doPost(e) {
       case 'tutupSesi':   return json(aksiTutupSesi(badan));
       case 'tambahWaktu': return json(aksiTambahWaktu(badan));
       case 'bukaBlokir':  return json(aksiBukaBlokir(badan));
+      case 'kodeKeluar':  return json(aksiKodeKeluar(badan));
+      case 'keluarDarurat': return json(aksiKeluarDarurat(badan));
       default:          return json({ ok: false, pesan: 'Aksi tidak dikenal: ' + aksi });
     }
   } catch (err) {
@@ -309,14 +319,18 @@ function aksiBukaSesi(b) {
 
   var jenis = jenisPaket(b.paket);
   var kode = String(Math.floor(100000 + Math.random() * 900000));
+  // Kode keluar dibuat berbeda dari kode sesi supaya murid tidak bisa menebaknya
+  // dari kode yang ditulis di papan tulis.
+  var kodeKeluar = String(Math.floor(100000 + Math.random() * 900000));
+  while (kodeKeluar === kode) kodeKeluar = String(Math.floor(100000 + Math.random() * 900000));
   sheet.appendRow([
     kode, b.kelas, b.paket, jenis, judulPaket(b.paket),
-    b.durasiMenit, new Date(), '', 'berjalan'
+    b.durasiMenit, new Date(), '', 'berjalan', kodeKeluar
   ]);
 
   return {
     ok: true, kode: kode, kelas: b.kelas, paket: b.paket, jenis: jenis,
-    judul: judulPaket(b.paket), durasiMenit: b.durasiMenit,
+    judul: judulPaket(b.paket), durasiMenit: b.durasiMenit, kodeKeluar: kodeKeluar,
     dibukaPada: Date.now(), ditutupPada: null, status: 'berjalan'
   };
 }
@@ -335,12 +349,73 @@ function aksiTutupSesi(b) {
   return { ok: false, pesan: 'Sesi tidak ditemukan' };
 }
 
+/**
+ * POST ?action=kodeKeluar
+ * Dipanggil aplikasi Android saat murid minta menutup aplikasi sebelum selesai.
+ * Guru yang mengetik kodenya di perangkat murid.
+ *
+ * TANPA PIN, karena yang memanggil adalah HP murid. Karena itu kodenya hanya
+ * DIBANDINGKAN di server; baik kode benar maupun salah, isinya tidak pernah ikut
+ * dalam jawaban. Setiap percobaan dicatat di _Log.
+ */
+function aksiKodeKeluar(b) {
+  var data = sheetSesi().getDataRange().getValues();
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][0]) !== String(b.sesi)) continue;
+    if (data[r][8] !== 'berjalan') return { ok: false, pesan: 'Sesi ini sudah ditutup guru.' };
+
+    var benar = data[r][KOL_KODE_KELUAR - 1];
+    if (!benar) {
+      return { ok: false, pesan: 'Sesi ini dibuka sebelum kode keluar ada. Guru perlu membuka sesi baru.' };
+    }
+    if (String(benar).trim() !== String(b.kode || '').trim()) {
+      catatLog('tolak', 'Kode keluar salah — sesi ' + b.sesi + ', NIS ' + b.nis);
+      return { ok: false, pesan: 'Kode keluar salah.' };
+    }
+
+    tandaiStatusProgres(b.sesi, b.nis, 'keluar');
+    catatLog('keluar', 'Sesi ' + b.sesi + ' — ' + b.nis + ' keluar aplikasi dengan izin guru');
+    return { ok: true };
+  }
+  return { ok: false, pesan: 'Sesi tidak ditemukan.' };
+}
+
+/**
+ * POST ?action=keluarDarurat
+ * Jalur cadangan aplikasi Android saat jaringan mati: murid menahan tombol
+ * keluar 10 detik, alarm berbunyi, dan kejadiannya dikirim ke sini begitu
+ * jaringan pulih. Tidak ada kode yang diperiksa — ini catatan, bukan izin.
+ */
+function aksiKeluarDarurat(b) {
+  tandaiStatusProgres(b.sesi, b.nis, 'keluar-darurat');
+  catatLog('keluar', 'Sesi ' + b.sesi + ' — ' + b.nis + ' keluar darurat tanpa kode: ' + (b.alasan || 'tanpa keterangan'));
+  return { ok: true };
+}
+
+/** Menulis status murid di _Progres tanpa menyentuh kolom lain. */
+function tandaiStatusProgres(sesi, nis, status) {
+  var sheet = sheetProgres();
+  var data = sheet.getDataRange().getValues();
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][0]) === String(sesi) && String(data[r][2]) === String(nis)) {
+      sheet.getRange(r + 1, 13).setValue(status);
+      sheet.getRange(r + 1, 15).setValue(new Date());
+      return true;
+    }
+  }
+  return false;
+}
+
 function aksiSesiKelas(p) {
   pastikanPin(p.pin);
   var data = sheetSesi().getDataRange().getValues();
   for (var r = data.length - 1; r >= 1; r--) {
     if (data[r][1] === p.kelas && data[r][8] === 'berjalan') {
-      return objekSesi(barisKeSesi(data[r]));
+      var s = barisKeSesi(data[r]);
+      var hasil = objekSesi(s);
+      // Aksi ini meminta PIN, jadi kode keluar boleh ikut untuk halaman guru.
+      hasil.kodeKeluar = s.kodeKeluar || '';
+      return hasil;
     }
   }
   return { ok: false, pesan: 'Belum ada sesi berjalan untuk kelas ini' };
@@ -617,7 +692,14 @@ function sheetBank() {
   return s;
 }
 
-function sheetSesi()    { return ambilAtauBuat('_Sesi', KOLOM_SESI); }
+function sheetSesi() {
+  var s = ambilAtauBuat('_Sesi', KOLOM_SESI);
+  // Sheet _Sesi buatan versi sebelumnya belum punya judul kolom J.
+  if (s.getLastColumn() < KOLOM_SESI.length) {
+    s.getRange(1, 1, 1, KOLOM_SESI.length).setValues([KOLOM_SESI]).setFontWeight('bold');
+  }
+  return s;
+}
 function sheetProgres() {
   var s = ambilAtauBuat('_Progres', KOLOM_PROGRES);
   // Sheet _Progres yang dibuat versi sebelumnya belum punya judul kolom P–Q.
@@ -683,7 +765,8 @@ function barisKeSesi(baris) {
   return {
     kode: String(baris[0]), kelas: baris[1], paket: baris[2], jenis: baris[3],
     judul: baris[4], durasiMenit: Number(baris[5]),
-    dibuka: baris[6], ditutup: baris[7], status: baris[8]
+    dibuka: baris[6], ditutup: baris[7], status: baris[8],
+    kodeKeluar: baris[9] ? String(baris[9]) : ''
   };
 }
 
@@ -694,6 +777,8 @@ function objekSesi(s) {
     dibukaPada: s.dibuka ? new Date(s.dibuka).getTime() : null,
     ditutupPada: s.ditutup ? new Date(s.ditutup).getTime() : null,
     status: s.status
+    // Kode keluar sengaja TIDAK di sini: action=sesi dipanggil murid tanpa PIN.
+    // Hanya aksiSesiKelas yang menambahkannya, dan aksi itu meminta PIN.
   };
 }
 

@@ -55,8 +55,13 @@ function bunyikanPeringatan(): void {
  * lebih baik guru menghampiri satu murid yang ternyata baik-baik saja daripada
  * melewatkan yang diam-diam menyerah.
  */
+/** Murid yang sudah tidak mengerjakan lagi: tidak dipantau dan tidak dibunyikan. */
+function sudahBerhenti(b: BarisPantau): boolean {
+  return b.status === 'mengirim' || b.status === 'keluar' || b.status === 'keluar-darurat';
+}
+
 function alasanBantuan(b: BarisPantau): string | null {
-  if (b.status === 'mengirim' || b.status === 'diblokir') return null;
+  if (sudahBerhenti(b) || b.status === 'diblokir') return null;
   if (b.jalanSoalAktif >= 12 && b.detikSoalAktif >= 240) {
     return `menjalankan kode ${b.jalanSoalAktif}× di soal ${b.soalAktif} tanpa lolos contoh`;
   }
@@ -128,10 +133,13 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
     (b: BarisPantau) => (b.diperbaruiPada ? Math.round((sekarang - b.diperbaruiPada) / 1000) : null),
     [sekarang],
   );
-  /** Murid yang sudah mengirim memang berhenti berdenyut — itu bukan kehilangan. */
+  /**
+   * Murid yang sudah mengirim atau keluar dengan izin guru memang berhenti
+   * berdenyut — itu bukan kehilangan.
+   */
   const sedangHilang = useCallback(
     (b: BarisPantau) => {
-      if (b.status === 'mengirim') return false;
+      if (sudahBerhenti(b)) return false;
       const diam = detikDiam(b);
       return diam !== null && diam > AMBANG_HILANG_DETIK;
     },
@@ -273,6 +281,14 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
                     <td>
                       {b.status === 'mengirim' ? (
                         <span className="pill pill--leaf">mengirim</span>
+                      ) : b.status === 'keluar' ? (
+                        <span className="pill pill--quiet" title="Guru mengetikkan kode keluar di HP murid">
+                          keluar · izin guru
+                        </span>
+                      ) : b.status === 'keluar-darurat' ? (
+                        <span className="pill pill--brand" title="Keluar tanpa kode: tombol darurat ditahan 10 detik">
+                          keluar darurat
+                        </span>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
                           {/* Kabar yang berhenti didahulukan: murid itu perlu dihampiri sekarang. */}

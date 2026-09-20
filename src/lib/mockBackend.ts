@@ -76,8 +76,14 @@ export function bukaSesi(kelas: Kelas, paket: string, durasiMenit: number): Sesi
     kode = String(100000 + Math.floor(rand() * 900000));
     if (!terpakai.has(kode)) break;
   }
+  // Kode keluar aplikasi Android — selalu berbeda dari kode sesi.
+  let kodeKeluar = kode;
+  for (let putaran = 0; putaran < 50 && kodeKeluar === kode; putaran++) {
+    const rand = mulberry32(hashSeed('keluar', kelas, paket, String(Date.now()), String(putaran)));
+    kodeKeluar = String(100000 + Math.floor(rand() * 900000));
+  }
   const sesi: SesiInfo = {
-    kode, kelas, paket, jenis: def.jenis, judul: def.judul,
+    kode, kelas, paket, jenis: def.jenis, judul: def.judul, kodeKeluar,
     durasiMenit, dibukaPada: Date.now(), ditutupPada: null, status: 'berjalan',
   };
   daftar.unshift(sesi);

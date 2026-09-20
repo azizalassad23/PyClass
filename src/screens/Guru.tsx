@@ -92,6 +92,7 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
   const [galat, setGalat] = useState('');
   const [panelPeriksa, setPanelPeriksa] = useState(false);
   const [konfirmasiTutup, setKonfirmasiTutup] = useState(false);
+  const [kodeKeluarTampil, setKodeKeluarTampil] = useState(false);
 
   const [paketBaru, setPaketBaru] = useState(PAKET[0].paket);
   const [durasiBaru, setDurasiBaru] = useState(PAKET[0].durasiMenit);
@@ -260,6 +261,39 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 40, fontWeight: 700, letterSpacing: '.08em', color: 'var(--brand-deep)' }}>
                   {sesi.kode}
                 </div>
+              </div>
+              {/* Kode keluar dipakai guru untuk melepas kunci aplikasi Android
+                  sebelum murid selesai. Disembunyikan sampai diminta supaya tidak
+                  terbaca murid yang lewat atau terekam foto layar. */}
+              <div className="card">
+                <div className="eyebrow" style={{ marginBottom: 6 }}>
+                  Kode keluar — jangan tulis di papan
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--mono)', fontSize: 32, fontWeight: 700, letterSpacing: '.08em',
+                    color: kodeKeluarTampil ? 'var(--ink)' : 'var(--muted-3)', lineHeight: 1.2,
+                  }}
+                >
+                  {sesi.kodeKeluar ? (kodeKeluarTampil ? sesi.kodeKeluar : '••••••') : '—'}
+                </div>
+                {sesi.kodeKeluar ? (
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    style={{ marginTop: 8 }}
+                    onClick={() => setKodeKeluarTampil((v) => !v)}
+                  >
+                    {kodeKeluarTampil ? 'Sembunyikan' : 'Tampilkan'}
+                  </button>
+                ) : (
+                  <p style={{ fontSize: 12.5, color: 'var(--muted-2)', margin: '6px 0 0', lineHeight: 1.6 }}>
+                    Sesi ini dibuka sebelum kode keluar ada. Buka sesi baru untuk memakainya.
+                  </p>
+                )}
+                <p style={{ fontSize: 12, color: 'var(--muted-2)', margin: '8px 0 0', lineHeight: 1.6 }}>
+                  Guru mengetik kode ini di HP murid yang perlu menutup aplikasi ujian lebih awal.
+                </p>
               </div>
               <div className="card">
                 <div className="eyebrow" style={{ marginBottom: 6 }}>Sesi</div>

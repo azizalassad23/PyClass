@@ -100,6 +100,12 @@ export interface SesiInfo {
   dibukaPada: number;
   ditutupPada: number | null;
   status: 'berjalan' | 'ditutup';
+  /**
+   * Kode yang dipakai guru untuk melepas kunci aplikasi Android sebelum murid
+   * selesai. Hanya ikut pada jawaban aksi ber-PIN, jadi tidak pernah sampai ke
+   * perangkat murid. Kosong untuk sesi lama yang dibuka sebelum fitur ini ada.
+   */
+  kodeKeluar?: string;
 }
 
 /**
