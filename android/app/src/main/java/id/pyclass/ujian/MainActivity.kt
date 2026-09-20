@@ -48,6 +48,12 @@ class MainActivity : Activity() {
     private var salahBerturut = 0
     private var tahanDarurat: Runnable? = null
 
+    /** Benar saat aplikasi sendiri yang membuka layar pengaturan izin. */
+    private var membukaPengaturan = false
+
+    /** Benar bila ada ujian yang sedang dikerjakan; sebelum itu alarm tidak berbunyi. */
+    private var ujianBerjalan = false
+
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate(simpanan: Bundle?) {
         super.onCreate(simpanan)
@@ -85,6 +91,7 @@ class MainActivity : Activity() {
      */
     private fun pantauIdentitas() {
         ambilIdentitas { sesi, nis ->
+            ujianBerjalan = sesi != null && nis != null
             if (sesi != null && nis != null) {
                 getSharedPreferences("pyclass", Context.MODE_PRIVATE).edit()
                     .putString("sesi", sesi).putString("nis", nis).apply()
@@ -140,7 +147,13 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.izin_judul)
             .setMessage(R.string.izin_pesan)
-            .setPositiveButton(R.string.izin_buka) { _, _ -> penguncian.mintaIzinJanganGanggu() }
+            .setPositiveButton(R.string.izin_buka) { _, _ ->
+                // Membuka Pengaturan membuat aplikasi ini berhenti sesaat. Tanpa
+                // penanda ini, alarm akan berbunyi padahal murid sedang menuruti
+                // permintaan aplikasi sendiri.
+                membukaPengaturan = true
+                penguncian.mintaIzinJanganGanggu()
+            }
             .setNegativeButton(R.string.izin_nanti, null)
             .setCancelable(false)
             .show()
@@ -269,6 +282,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        membukaPengaturan = false
+        penguncian.hentikanAlarm()
         if (!bolehKeluar) penguncian.sematkanLayar()
     }
 
@@ -279,7 +294,9 @@ class MainActivity : Activity() {
      */
     override fun onPause() {
         super.onPause()
-        if (!bolehKeluar && !isFinishing) penguncian.bunyikanAlarm()
+        val sengaja = bolehKeluar || membukaPengaturan || isFinishing
+        // Sebelum murid masuk ujian, keluar aplikasi bukan pelanggaran apa pun.
+        if (!sengaja && ujianBerjalan) penguncian.bunyikanAlarm()
     }
 
     override fun onDestroy() {
