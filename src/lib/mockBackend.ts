@@ -13,8 +13,8 @@ import { normalisasiKeluaran } from './format';
 import { hashSeed, kodeKonfirmasi, mulberry32, pilihAcak } from './rng';
 import { baca, daftarKunci, tulis } from './storage';
 import type {
-  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, PaketUjian, SesiInfo, Soal,
-  SubmitPayload,
+  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, PaketUjian, SesiInfo,
+  Soal, SubmitPayload,
 } from './types';
 
 const K_SESI = 'demo:sesi';
@@ -58,14 +58,20 @@ export function cekSesi(kode: string): SesiInfo {
 }
 
 export function sesiAktifKelas(kelas: Kelas): SesiInfo | null {
-  return semuaSesi().find((s) => s.kelas === kelas && s.status === 'berjalan') ?? null;
+  // Sesi gabungan ('SEMUA') ikut terpakai oleh setiap kelas.
+  return semuaSesi().find(
+    (s) => (s.kelas === kelas || s.kelas === 'SEMUA') && s.status === 'berjalan',
+  ) ?? null;
 }
 
-export function bukaSesi(kelas: Kelas, paket: string, durasiMenit: number): SesiInfo {
+export function bukaSesi(kelas: KelasSesi, paket: string, durasiMenit: number): SesiInfo {
   const def = PAKET_BY_ID.get(paket);
   if (!def) throw new Error(`Paket ${paket} tidak dikenal`);
+  // Sesi berjalan yang kelasnya beririsan ditutup; 'SEMUA' beririsan dengan semuanya.
   const daftar = semuaSesi().map((s) =>
-    s.kelas === kelas && s.status === 'berjalan' ? { ...s, status: 'ditutup' as const } : s,
+    (s.kelas === kelas || s.kelas === 'SEMUA' || kelas === 'SEMUA') && s.status === 'berjalan'
+      ? { ...s, status: 'ditutup' as const }
+      : s,
   );
   // Seed ikut memakai penghitung agar dua klik dalam milidetik yang sama tidak
   // menghasilkan kode kembar; lalu dipastikan belum pernah dipakai sesi mana pun.
@@ -236,6 +242,7 @@ export function denyut(d: Denyut): { tambahanMenit: number; bukaBlokirKe: number
   const bukaBlokirKe = lama?.bukaBlokirKe ?? 0;
   tulis(kunci, {
     sesi: d.sesi,
+    kelas: d.kelas,
     nis: d.nis,
     nama: d.nama,
     soalAktif: d.soalAktif,

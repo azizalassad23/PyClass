@@ -3,6 +3,14 @@
 export type Kelas = 'XA' | 'XB' | 'XC' | 'XD';
 export const KELAS_LIST: Kelas[] = ['XA', 'XB', 'XC', 'XD'];
 
+/**
+ * Kelas yang dilayani satu sesi. `SEMUA` dipakai saat beberapa kelas ujian
+ * bersamaan: satu kode sesi dan satu kode keluar untuk semuanya. Murid tetap
+ * memilih kelasnya sendiri saat masuk, dan nilainya masuk ke sheet kelas itu.
+ */
+export type KelasSesi = Kelas | 'SEMUA';
+export const KELAS_SEMUA = 'SEMUA';
+
 /** `ujian` = UTS/UAS (10 soal / 90 menit). `kuis` = kuis unit (5 soal / 20 menit). */
 // `termquiz` = Pra-Term Quiz (20 soal / 70 menit, U1–U3, berbahasa Inggris).
 // Jenis menentukan sheet nilainya: "XA — Ujian", "XA — Kuis", "XA — Term Quiz".
@@ -92,7 +100,8 @@ export interface BarisRekap {
 
 export interface SesiInfo {
   kode: string;
-  kelas: Kelas;
+  /** Kelas yang dilayani; 'SEMUA' berarti satu sesi untuk beberapa kelas sekaligus. */
+  kelas: KelasSesi;
   paket: string;
   jenis: JenisPenilaian;
   judul: string;
@@ -144,6 +153,8 @@ export interface Denyut {
 }
 
 export interface BarisPantau {
+  /** Kelas murid; penting pada sesi gabungan yang memuat beberapa kelas. */
+  kelas: string;
   nis: string;
   nama: string;
   soalAktif: number;

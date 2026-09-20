@@ -93,6 +93,8 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
   const [panelPeriksa, setPanelPeriksa] = useState(false);
   const [konfirmasiTutup, setKonfirmasiTutup] = useState(false);
   const [kodeKeluarTampil, setKodeKeluarTampil] = useState(false);
+  /** Membuka satu sesi untuk seluruh kelas sekaligus. */
+  const [gabungan, setGabungan] = useState(false);
 
   const [paketBaru, setPaketBaru] = useState(PAKET[0].paket);
   const [durasiBaru, setDurasiBaru] = useState(PAKET[0].durasiMenit);
@@ -120,7 +122,7 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
     setSibuk(true);
     setGalat('');
     try {
-      const s = await bukaSesi(pin, kelas, paketBaru, durasiBaru);
+      const s = await bukaSesi(pin, gabungan ? 'SEMUA' : kelas, paketBaru, durasiBaru);
       setSesi(s);
       setRekap([]);
       setDimuatPada(Date.now());
@@ -258,6 +260,11 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                 <div className="eyebrow" style={{ color: 'var(--brand-hover)', marginBottom: 6 }}>
                   Kode sesi — tulis di papan
                 </div>
+                {sesi.kelas === 'SEMUA' && (
+                  <span className="pill pill--brand" style={{ marginBottom: 8 }}>
+                    berlaku untuk semua kelas
+                  </span>
+                )}
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 40, fontWeight: 700, letterSpacing: '.08em', color: 'var(--brand-deep)' }}>
                   {sesi.kode}
                 </div>
@@ -347,11 +354,36 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                   Buka sesi
                 </button>
               </div>
+              {/* Empat kelas yang ujian bersamaan tidak perlu empat kode sesi dan
+                  empat kode keluar. Nilai tetap masuk ke sheet kelas masing-masing,
+                  karena kelas diambil dari isian murid saat masuk. */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 14, fontSize: 13.5, color: 'var(--body)' }}>
+                <input
+                  type="checkbox"
+                  checked={gabungan}
+                  onChange={(e) => setGabungan(e.target.checked)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <b>Satu sesi untuk semua kelas</b>
+                  <br />
+                  <span style={{ fontSize: 12.5, color: 'var(--muted-2)', lineHeight: 1.6 }}>
+                    Satu kode sesi dan satu kode keluar dipakai {KELAS_LIST.join(', ')}. Murid tetap memilih
+                    kelasnya sendiri, dan nilainya masuk ke sheet kelas itu. Membuka sesi ini menutup sesi
+                    kelas mana pun yang sedang berjalan.
+                  </span>
+                </span>
+              </label>
             </section>
           )}
 
           {sesi && sesi.status === 'berjalan' && (
-            <PapanPantau pin={pin} sesi={sesi.kode} durasiMenit={sesi.durasiMenit} />
+            <PapanPantau
+              pin={pin}
+              sesi={sesi.kode}
+              durasiMenit={sesi.durasiMenit}
+              gabungan={sesi.kelas === 'SEMUA'}
+            />
           )}
 
           <section className="card" style={{ padding: 0, overflow: 'hidden' }}>

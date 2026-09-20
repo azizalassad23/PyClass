@@ -59,7 +59,9 @@ export function UjianMasuk() {
     setMemuat(true);
     try {
       const sesi = await cekSesi(kodeSesi);
-      if (sesi.kelas !== kelas) {
+      // Sesi gabungan melayani semua kelas; murid tetap memilih kelasnya sendiri
+      // karena nilainya masuk ke sheet kelas itu.
+      if (sesi.kelas !== 'SEMUA' && sesi.kelas !== kelas) {
         setGalatUmum(`Kode sesi ini dibuka untuk kelas ${sesi.kelas}, bukan ${kelas}. Periksa lagi pilihan kelasmu.`);
         return;
       }
@@ -240,7 +242,8 @@ export function UjianMasuk() {
                         className="btn btn--ghost btn--sm"
                         onClick={() => {
                           setDigit(s.kode.split(''));
-                          setKelas(s.kelas);
+                          // Sesi gabungan tidak menentukan kelas: biarkan pilihan murid.
+                          if (s.kelas !== 'SEMUA') setKelas(s.kelas);
                           setGalatUmum('');
                         }}
                       >

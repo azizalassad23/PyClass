@@ -74,7 +74,10 @@ function alasanBantuan(b: BarisPantau): string | null {
   return null;
 }
 
-export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: string; durasiMenit: number }) {
+export function PapanPantau(
+  { pin, sesi, durasiMenit, gabungan = false }:
+  { pin: string; sesi: string; durasiMenit: number; gabungan?: boolean },
+) {
   const [baris, setBaris] = useState<BarisPantau[]>([]);
   const [dimuatPada, setDimuatPada] = useState<number | null>(null);
   const [galat, setGalat] = useState('');
@@ -257,7 +260,12 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
                   >
                     <td>
                       <b>{b.nama}</b>
-                      <div style={{ fontSize: 11.5, color: 'var(--muted-2)', fontFamily: 'var(--mono)' }}>{b.nis}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--muted-2)', fontFamily: 'var(--mono)' }}>
+                        {b.nis}
+                        {/* Pada sesi gabungan, satu papan memuat empat kelas —
+                            kelasnya harus terlihat supaya guru tahu harus ke mana. */}
+                        {gabungan && b.kelas ? ` · ${b.kelas}` : ''}
+                      </div>
                     </td>
                     <td style={{ fontFamily: 'var(--mono)' }}>{b.soalAktif}/{b.totalSoal}</td>
                     <td style={{ fontFamily: 'var(--mono)' }}>{b.diisi}</td>

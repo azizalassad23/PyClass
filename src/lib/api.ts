@@ -7,8 +7,8 @@
  */
 import * as demo from './mockBackend';
 import type {
-  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, PaketUjian, SesiInfo,
-  SubmitPayload,
+  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, PaketUjian,
+  SesiInfo, SubmitPayload,
 } from './types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? '').trim();
@@ -99,7 +99,7 @@ export async function cekSesi(kode: string): Promise<SesiInfo> {
 // ── Guru ─────────────────────────────────────────────────────────────────────
 
 export async function bukaSesi(
-  pin: string, kelas: Kelas, paket: string, durasiMenit: number,
+  pin: string, kelas: KelasSesi, paket: string, durasiMenit: number,
 ): Promise<SesiInfo> {
   if (MODE_DEMO) return demo.bukaSesi(kelas, paket, durasiMenit);
   return post<SesiInfo>('bukaSesi', { pin, kelas, paket, durasiMenit });

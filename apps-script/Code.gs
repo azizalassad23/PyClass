@@ -17,6 +17,12 @@
 
 var PIN_PROPERTY = 'PIN_GURU';
 var KELAS = ['XA', 'XB', 'XC', 'XD'];
+/**
+ * Nilai kolom Kelas di _Sesi untuk sesi yang berlaku bagi SEMUA kelas. Dipakai
+ * saat empat kelas ujian bersamaan: satu kode sesi dan satu kode keluar untuk
+ * semuanya. Nilai murid tetap masuk ke sheet kelasnya sendiri.
+ */
+var KELAS_SEMUA = 'SEMUA';
 
 /**
  * Susunan kolom sheet nilai untuk n soal. Ujian & kuis memakai n = 10 (kuis
@@ -177,6 +183,12 @@ function aksiNilai(b) {
   if (KELAS.indexOf(b.kelas) === -1) {
     return { ok: false, pesan: 'Kelas tidak dikenal: ' + b.kelas };
   }
+  // Sesi satu kelas hanya menerima kelas itu. Sesi SEMUA menerima kelas mana pun,
+  // dan barisnya tetap masuk ke sheet kelas yang dipilih murid.
+  if (sesi.kelas !== KELAS_SEMUA && sesi.kelas !== b.kelas) {
+    catatLog('tolak', 'Submisi NIS ' + b.nis + ' kelas ' + b.kelas + ' — sesi ' + b.sesi + ' milik kelas ' + sesi.kelas);
+    return { ok: false, pesan: 'Sesi ini dibuka untuk kelas ' + sesi.kelas + ', bukan ' + b.kelas + '.' };
+  }
 
   // Jenis dan paket diambil dari sesi di server, bukan dari kiriman browser:
   // keduanya menentukan sheet tujuan dan kunci penimpaan baris.
@@ -305,13 +317,17 @@ function aksiCekPin(p) {
 
 function aksiBukaSesi(b) {
   pastikanPin(b.pin);
-  if (KELAS.indexOf(b.kelas) === -1) return { ok: false, pesan: 'Kelas tidak dikenal' };
+  if (KELAS.indexOf(b.kelas) === -1 && b.kelas !== KELAS_SEMUA) {
+    return { ok: false, pesan: 'Kelas tidak dikenal' };
+  }
 
   var sheet = sheetSesi();
   var data = sheet.getDataRange().getValues();
-  // Tutup sesi lain yang masih berjalan di kelas yang sama.
+  // Tutup sesi berjalan yang kelasnya beririsan. Sesi SEMUA beririsan dengan
+  // semua kelas, jadi satu murid tidak pernah punya dua kode sesi yang sah.
   for (var r = 1; r < data.length; r++) {
-    if (data[r][1] === b.kelas && data[r][8] === 'berjalan') {
+    var beririsan = data[r][1] === b.kelas || data[r][1] === KELAS_SEMUA || b.kelas === KELAS_SEMUA;
+    if (beririsan && data[r][8] === 'berjalan') {
       sheet.getRange(r + 1, 8).setValue(new Date());
       sheet.getRange(r + 1, 9).setValue('ditutup');
     }
@@ -410,7 +426,7 @@ function aksiSesiKelas(p) {
   pastikanPin(p.pin);
   var data = sheetSesi().getDataRange().getValues();
   for (var r = data.length - 1; r >= 1; r--) {
-    if (data[r][1] === p.kelas && data[r][8] === 'berjalan') {
+    if ((data[r][1] === p.kelas || data[r][1] === KELAS_SEMUA) && data[r][8] === 'berjalan') {
       var s = barisKeSesi(data[r]);
       var hasil = objekSesi(s);
       // Aksi ini meminta PIN, jadi kode keluar boleh ikut untuk halaman guru.
@@ -432,6 +448,7 @@ function aksiPantau(p) {
   for (var r = 1; r < data.length; r++) {
     if (String(data[r][0]) !== String(p.sesi)) continue;
     baris.push({
+      kelas: String(data[r][1] || ''),
       nis: String(data[r][2]),
       nama: data[r][3],
       soalAktif: Number(data[r][4]) || 0,
