@@ -1,12 +1,54 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ambilPantau, bukaBlokir, tambahWaktu } from '../lib/api';
 import { mmss, sejakDetik } from '../lib/format';
 import type { BarisPantau } from '../lib/types';
 
 /** Denyut murid datang tiap 45 detik; menyegarkan lebih cepat tidak ada gunanya. */
 const JEDA_SEGAR_MS = 20_000;
-/** Sesudah ini murid dianggap terputus, bukan sekadar belum berdenyut. */
-const AMBANG_HILANG_DETIK = 150;
+/**
+ * Sesudah ini murid dianggap hilang, bukan sekadar belum berdenyut. Denyut
+ * datang tiap 45 detik, jadi 75 detik berarti satu denyut benar-benar terlewat
+ * dan bukan sekadar jaringan yang lambat sesaat.
+ *
+ * Inilah satu-satunya cara memantau murid yang mematikan HP-nya: aplikasi di
+ * perangkat mana pun tidak bisa mencegah tombol power, tetapi denyut yang
+ * berhenti selalu terlihat dari sini.
+ */
+const AMBANG_HILANG_DETIK = 75;
+/** Hitungan waktu layar disegarkan sendiri supaya durasi "hilang" ikut berjalan. */
+const JEDA_DETAK_MS = 5_000;
+
+function lamaHilang(detik: number): string {
+  if (detik < 60) return `${detik} detik`;
+  return `${Math.floor(detik / 60)} menit ${detik % 60} detik`;
+}
+
+/**
+ * Bunyi peringatan di meja guru. Dua nada pendek memakai WebAudio, jadi tidak
+ * perlu berkas suara. Halaman guru selalu dibuka lewat klik (login PIN),
+ * sehingga peramban mengizinkan audio berbunyi.
+ */
+function bunyikanPeringatan(): void {
+  try {
+    const Konteks = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Konteks) return;
+    const ctx = new Konteks();
+    [0, 0.28].forEach((jeda) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + jeda);
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + jeda + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + jeda + 0.2);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + jeda);
+      osc.stop(ctx.currentTime + jeda + 0.22);
+    });
+    window.setTimeout(() => void ctx.close(), 1200);
+  } catch {
+    /* peramban menolak audio — peringatan visual tetap tampil */
+  }
+}
 
 /**
  * Alasan seorang murid ditandai butuh bantuan. Ambangnya sengaja longgar:
@@ -33,6 +75,10 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
   const [galat, setGalat] = useState('');
   const [sibukNis, setSibukNis] = useState<string | null>(null);
   const [otomatis, setOtomatis] = useState(true);
+  const [bunyi, setBunyi] = useState(true);
+  const [sekarang, setSekarang] = useState(() => Date.now());
+  /** NIS yang sudah dibunyikan, supaya satu murid tidak berbunyi tiap penyegaran. */
+  const sudahBunyi = useRef<Set<string>>(new Set());
 
   const muat = useCallback(async () => {
     try {
@@ -73,10 +119,43 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
     if (setuju) void jalankanAksi(b.nis, () => bukaBlokir(pin, sesi, b.nis));
   };
 
+  useEffect(() => {
+    const id = window.setInterval(() => setSekarang(Date.now()), JEDA_DETAK_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const detikDiam = useCallback(
+    (b: BarisPantau) => (b.diperbaruiPada ? Math.round((sekarang - b.diperbaruiPada) / 1000) : null),
+    [sekarang],
+  );
+  /** Murid yang sudah mengirim memang berhenti berdenyut — itu bukan kehilangan. */
+  const sedangHilang = useCallback(
+    (b: BarisPantau) => {
+      if (b.status === 'mengirim') return false;
+      const diam = detikDiam(b);
+      return diam !== null && diam > AMBANG_HILANG_DETIK;
+    },
+    [detikDiam],
+  );
+
   const butuhBantuan = baris.filter((b) => alasanBantuan(b) !== null);
   const sudahKirim = baris.filter((b) => b.status === 'mengirim').length;
   const diblokir = baris.filter((b) => b.status === 'diblokir').length;
-  const sekarang = Date.now();
+  const hilang = baris.filter(sedangHilang);
+  // Daftar NIS sebagai teks: isinya sama berarti tidak ada yang berubah, jadi
+  // efek di bawah tidak berjalan ulang setiap kali komponen digambar.
+  const kunciHilang = hilang.map((b) => b.nis).sort().join(',');
+
+  // Bunyi sekali per murid. Murid yang denyutnya kembali dihapus dari daftar,
+  // jadi ia berbunyi lagi bila menghilang untuk kedua kalinya.
+  useEffect(() => {
+    const nisHilang = new Set(kunciHilang === '' ? [] : kunciHilang.split(','));
+    sudahBunyi.current.forEach((nis) => { if (!nisHilang.has(nis)) sudahBunyi.current.delete(nis); });
+    const baru = [...nisHilang].filter((nis) => !sudahBunyi.current.has(nis));
+    if (baru.length === 0) return;
+    baru.forEach((nis) => sudahBunyi.current.add(nis));
+    if (bunyi) bunyikanPeringatan();
+  }, [kunciHilang, bunyi]);
 
   return (
     <section className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 24 }}>
@@ -89,13 +168,21 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
         <h2 style={{ fontSize: 19, margin: 0 }}>Papan pantau kelas</h2>
         <span style={{ fontSize: 12.5, color: 'var(--muted-2)' }}>
           {baris.length} murid terpantau · {sudahKirim} sudah mengirim
-          {diblokir > 0 && <b style={{ color: 'var(--brand-deep)' }}> · {diblokir} diblokir</b>} · diperbarui{' '}
+          {diblokir > 0 && <b style={{ color: 'var(--brand-deep)' }}> · {diblokir} diblokir</b>}
+          {hilang.length > 0 && <b style={{ color: 'var(--brand-deep)' }}> · {hilang.length} hilang</b>} · diperbarui{' '}
           {sejakDetik(dimuatPada)}
         </span>
         <span style={{ flex: 1 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--muted)' }}>
           <input type="checkbox" checked={otomatis} onChange={(e) => setOtomatis(e.target.checked)} />
           Segarkan otomatis
+        </label>
+        <label
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--muted)' }}
+          title="Bunyi peringatan saat kabar seorang murid berhenti"
+        >
+          <input type="checkbox" checked={bunyi} onChange={(e) => setBunyi(e.target.checked)} />
+          Bunyi peringatan
         </label>
         <button type="button" className="btn btn--ghost btn--sm" onClick={() => void muat()}>
           Segarkan
@@ -148,13 +235,18 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
               baris.map((b) => {
                 const alasan = alasanBantuan(b);
                 const terblokir = b.status === 'diblokir';
-                const diamDetik = b.diperbaruiPada ? Math.round((sekarang - b.diperbaruiPada) / 1000) : null;
-                const hilang = diamDetik !== null && diamDetik > AMBANG_HILANG_DETIK;
+                const diamDetik = detikDiam(b);
+                const barisHilang = sedangHilang(b);
                 const sisaBlokirMenit = b.diblokirSampai
                   ? Math.max(0, Math.ceil((b.diblokirSampai - sekarang) / 60_000))
                   : null;
                 return (
-                  <tr key={b.nis} style={{ background: alasan || terblokir ? 'var(--brand-wash)' : undefined }}>
+                  <tr
+                    key={b.nis}
+                    style={{
+                      background: barisHilang ? 'var(--brand-tint)' : alasan || terblokir ? 'var(--brand-wash)' : undefined,
+                    }}
+                  >
                     <td>
                       <b>{b.nama}</b>
                       <div style={{ fontSize: 11.5, color: 'var(--muted-2)', fontFamily: 'var(--mono)' }}>{b.nis}</div>
@@ -181,27 +273,43 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
                     <td>
                       {b.status === 'mengirim' ? (
                         <span className="pill pill--leaf">mengirim</span>
-                      ) : terblokir ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                          <span className="pill pill--brand" title="Keluar dari halaman ujian lebih dari sekali">
-                            diblokir{sisaBlokirMenit !== null ? ` · ${sisaBlokirMenit} m lagi` : ''}
-                          </span>
-                          <button
-                            type="button"
-                            className="btn btn--ghost btn--sm"
-                            style={{ minHeight: 30, padding: '4px 10px', fontSize: 12 }}
-                            onClick={() => lepasBlokir(b)}
-                            disabled={sibukNis !== null}
-                          >
-                            Buka blokir
-                          </button>
-                        </div>
-                      ) : hilang ? (
-                        <span className="pill pill--brand" title={`Kabar terakhir ${diamDetik} detik lalu`}>
-                          terputus?
-                        </span>
                       ) : (
-                        <span className="pill pill--quiet">{sejakDetik(b.diperbaruiPada)}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                          {/* Kabar yang berhenti didahulukan: murid itu perlu dihampiri sekarang. */}
+                          {barisHilang && (
+                            <>
+                              <span
+                                className="pill pill--brand"
+                                style={{ fontWeight: 700 }}
+                                title="Denyut berhenti. Bisa berarti HP dimatikan, aplikasi ditutup, atau jaringan putus."
+                              >
+                                hilang {lamaHilang(diamDetik ?? 0)}
+                              </span>
+                              <span style={{ fontSize: 11, color: 'var(--brand-deep)', lineHeight: 1.4 }}>
+                                HP mati, keluar aplikasi, atau jaringan putus
+                              </span>
+                            </>
+                          )}
+                          {terblokir && (
+                            <>
+                              <span className="pill pill--brand" title="Keluar dari halaman ujian lebih dari sekali">
+                                diblokir{sisaBlokirMenit !== null ? ` · ${sisaBlokirMenit} m lagi` : ''}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn btn--ghost btn--sm"
+                                style={{ minHeight: 30, padding: '4px 10px', fontSize: 12 }}
+                                onClick={() => lepasBlokir(b)}
+                                disabled={sibukNis !== null}
+                              >
+                                Buka blokir
+                              </button>
+                            </>
+                          )}
+                          {!barisHilang && !terblokir && (
+                            <span className="pill pill--quiet">{sejakDetik(b.diperbaruiPada)}</span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td>
@@ -230,7 +338,9 @@ export function PapanPantau({ pin, sesi, durasiMenit }: { pin: string; sesi: str
 
       <p style={{ fontSize: 12.5, color: 'var(--muted-2)', padding: '14px 20px', margin: 0, borderTop: '1px solid var(--line)' }}>
         Murid mengirim kabar tiap 45 detik (tiap 15 detik saat diblokir), jadi angka di sini bisa tertinggal
-        sekitar satu menit. Durasi sesi ini {durasiMenit} menit. Murid yang keluar dari halaman ujian lebih
+        sekitar satu menit. Kabar yang berhenti lebih dari {AMBANG_HILANG_DETIK} detik ditandai <b>hilang</b> dan
+        berbunyi sekali: HP dimatikan, aplikasi ditutup, atau jaringan putus. Mematikan HP tidak bisa dicegah dari
+        aplikasi mana pun, tetapi selalu terlihat di sini. Durasi sesi ini {durasiMenit} menit. Murid yang keluar dari halaman ujian lebih
         dari sekali diblokir — kuis unit 10 menit, lainnya 30 menit — dan jawabannya dikosongkan saat blokir
         berakhir, termasuk bila dibuka lebih awal oleh guru. Keluar lagi saat diblokir memulai ulang hitungannya.
       </p>
