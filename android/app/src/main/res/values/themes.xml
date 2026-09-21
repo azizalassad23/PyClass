@@ -5,5 +5,29 @@
         <item name="android:windowBackground">@color/krem</item>
         <item name="android:statusBarColor">@color/tinta</item>
         <item name="android:navigationBarColor">@color/tinta</item>
+        <item name="android:colorAccent">@color/jingga</item>
+    </style>
+
+    <!-- Layar penuh kode keluar. -->
+    <style name="Tema.PyClass.LayarPenuh" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/krem</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@color/krem</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/krem</item>
+        <item name="android:windowAnimationStyle">@style/Animasi.Naik</item>
+    </style>
+
+    <!-- Kartu mengambang, misalnya permintaan izin. -->
+    <style name="Tema.PyClass.Kartu" parent="android:Theme.Material.Light.Dialog.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowMinWidthMajor">100%</item>
+        <item name="android:windowMinWidthMinor">100%</item>
+        <item name="android:backgroundDimAmount">0.55</item>
+    </style>
+
+    <style name="Animasi.Naik">
+        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
     </style>
 </resources>

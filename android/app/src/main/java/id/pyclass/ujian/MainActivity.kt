@@ -1,29 +1,35 @@
 package id.pyclass.ujian
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Context
-import android.graphics.Color
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
-import android.view.Gravity
+import android.os.SystemClock
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.LinearInterpolator
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.util.concurrent.Executors
+import kotlin.math.ceil
 
 /**
  * Cangkang ujian PyClass.
@@ -40,13 +46,20 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var penguncian: Penguncian
     private lateinit var labelStatus: TextView
+    private lateinit var progresMuat: ProgressBar
+    private lateinit var lapisanMuat: View
+    private lateinit var lapisanOffline: View
+    private lateinit var lapisanDarurat: View
+    private lateinit var lembarDarurat: View
+    private lateinit var progresDarurat: ProgressBar
+    private lateinit var hitungDarurat: TextView
+
     private val tangan = Handler(Looper.getMainLooper())
     private val pekerja = Executors.newSingleThreadExecutor()
 
     /** Benar setelah guru memberi kode keluar atau murid memakai jalur darurat. */
     private var bolehKeluar = false
     private var salahBerturut = 0
-    private var tahanDarurat: Runnable? = null
 
     /** Benar saat aplikasi sendiri yang membuka layar pengaturan izin. */
     private var membukaPengaturan = false
@@ -54,12 +67,41 @@ class MainActivity : Activity() {
     /** Benar bila ada ujian yang sedang dikerjakan; sebelum itu alarm tidak berbunyi. */
     private var ujianBerjalan = false
 
-    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
+    private var dialogKeluar: Dialog? = null
+    private var animasiDarurat: ValueAnimator? = null
+    private var waktuTekan = 0L
+
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(simpanan: Bundle?) {
         super.onCreate(simpanan)
         penguncian = Penguncian(this)
-        setContentView(susunTampilan())
+        setContentView(R.layout.activity_utama)
 
+        web = findViewById(R.id.web)
+        labelStatus = findViewById(R.id.label_status)
+        progresMuat = findViewById(R.id.progres_muat)
+        lapisanMuat = findViewById(R.id.lapisan_muat)
+        lapisanOffline = findViewById(R.id.lapisan_offline)
+        lapisanDarurat = findViewById(R.id.lapisan_darurat)
+        lembarDarurat = findViewById(R.id.lembar_darurat)
+        progresDarurat = findViewById(R.id.progres_darurat)
+        hitungDarurat = findViewById(R.id.hitung_darurat)
+
+        siapkanWeb()
+        siapkanTombolKeluar()
+        findViewById<View>(R.id.tombol_coba_lagi).setOnClickListener { cobaLagi() }
+
+        web.loadUrl(Konfig.URL_SITUS)
+        penguncian.mulai()
+        if (!penguncian.izinJanganGangguAda()) tawarkanIzinJanganGanggu()
+        kirimCatatanTertunda()
+        pantauIdentitas()
+    }
+
+    // ── WebView ─────────────────────────────────────────────────────────────
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun siapkanWeb() {
         web.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -69,6 +111,12 @@ class MainActivity : Activity() {
             allowFileAccess = false
             allowContentAccess = false
         }
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(tampilan: WebView, persen: Int) {
+                progresMuat.progress = persen
+                progresMuat.visibility = if (persen < 100) View.VISIBLE else View.INVISIBLE
+            }
+        }
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(tampilan: WebView, permintaan: WebResourceRequest): Boolean {
                 val host = permintaan.url.host ?: return true
@@ -76,159 +124,214 @@ class MainActivity : Activity() {
                 // walaupun ada tautan di halaman.
                 return host !in Konfig.HOST_DIIZINKAN
             }
-        }
-        web.loadUrl(Konfig.URL_SITUS)
 
-        penguncian.mulai()
-        if (!penguncian.izinJanganGangguAda()) tawarkanIzinJanganGanggu()
-        kirimCatatanTertunda()
-        pantauIdentitas()
+            override fun onPageStarted(tampilan: WebView, url: String, ikon: Bitmap?) {
+                lapisanOffline.visibility = View.GONE
+            }
+
+            override fun onPageFinished(tampilan: WebView, url: String) {
+                if (lapisanOffline.visibility != View.VISIBLE) sembunyikan(lapisanMuat)
+            }
+
+            override fun onReceivedError(tampilan: WebView, permintaan: WebResourceRequest, galat: WebResourceError) {
+                // Hanya halaman utama yang dianggap gagal; gambar atau skrip yang
+                // gagal dimuat tidak boleh menutup layar ujian.
+                if (permintaan.isForMainFrame) {
+                    lapisanMuat.visibility = View.GONE
+                    tampilkan(lapisanOffline)
+                }
+            }
+        }
     }
+
+    private fun cobaLagi() {
+        lapisanOffline.visibility = View.GONE
+        lapisanMuat.alpha = 1f
+        lapisanMuat.visibility = View.VISIBLE
+        web.reload()
+    }
+
+    private fun tampilkan(v: View) {
+        v.alpha = 0f
+        v.visibility = View.VISIBLE
+        v.animate().alpha(1f).setDuration(180).setListener(null).start()
+    }
+
+    private fun sembunyikan(v: View) {
+        if (v.visibility != View.VISIBLE) return
+        v.animate().alpha(0f).setDuration(220).setListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animasi: Animator) {
+                v.visibility = View.GONE
+                v.alpha = 1f
+            }
+        }).start()
+    }
+
+    // ── Tombol Keluar: ketuk = kode guru, tahan = darurat ────────────────────
 
     /**
-     * Menyalin sesi dan NIS ke penyimpanan aplikasi tiap 30 detik. PenerimaMati
-     * membutuhkannya saat HP dimatikan, dan saat itu WebView sudah tidak bisa ditanya.
+     * Ketukan biasa membuka layar kode keluar. Menahan lebih dari
+     * [AMBANG_TAHAN_MS] memunculkan lembar darurat dengan hitung mundur; melepas
+     * sebelum habis membatalkannya.
      */
-    private fun pantauIdentitas() {
-        ambilIdentitas { sesi, nis ->
-            ujianBerjalan = sesi != null && nis != null
-            if (sesi != null && nis != null) {
-                getSharedPreferences("pyclass", Context.MODE_PRIVATE).edit()
-                    .putString("sesi", sesi).putString("nis", nis).apply()
-            }
-        }
-        tangan.postDelayed({ pantauIdentitas() }, 30_000)
-    }
-
-    // ── Tampilan ────────────────────────────────────────────────────────────
-
-    private fun susunTampilan(): View {
-        val akar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-
-        val bilah = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.parseColor("#1F1B16"))
-            setPadding(32, 16, 16, 16)
-        }
-        labelStatus = TextView(this).apply {
-            text = getString(R.string.status_terkunci)
-            setTextColor(Color.parseColor("#E8DDD0"))
-            textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val tombolKeluar = Button(this).apply {
-            text = getString(R.string.tombol_keluar)
-            setOnClickListener { tanyaKodeKeluar() }
-            // Tahan lama = jalur darurat saat jaringan mati.
-            setOnTouchListener { _, kejadian ->
-                when (kejadian.action) {
-                    MotionEvent.ACTION_DOWN -> mulaiHitungDarurat()
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> batalkanHitungDarurat()
+    @SuppressLint("ClickableViewAccessibility")
+    private fun siapkanTombolKeluar() {
+        val tombol = findViewById<View>(R.id.tombol_keluar)
+        val mulaiDarurat = Runnable { mulaiHitungDarurat() }
+        tombol.setOnClickListener { bukaKodeKeluar() }
+        tombol.setOnTouchListener { v, kejadian ->
+            when (kejadian.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.isPressed = true
+                    waktuTekan = SystemClock.uptimeMillis()
+                    tangan.postDelayed(mulaiDarurat, AMBANG_TAHAN_MS)
                 }
-                // false: ketukan biasa tetap diteruskan ke setOnClickListener.
-                false
+                MotionEvent.ACTION_UP -> {
+                    v.isPressed = false
+                    tangan.removeCallbacks(mulaiDarurat)
+                    if (animasiDarurat != null) {
+                        batalkanHitungDarurat()
+                    } else if (SystemClock.uptimeMillis() - waktuTekan < AMBANG_TAHAN_MS) {
+                        v.performClick()
+                    }
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    tangan.removeCallbacks(mulaiDarurat)
+                    batalkanHitungDarurat()
+                }
             }
+            true
         }
-        bilah.addView(labelStatus)
-        bilah.addView(tombolKeluar)
-
-        web = WebView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f,
-            )
-        }
-        akar.addView(bilah, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        akar.addView(web)
-        return akar
     }
 
-    private fun tawarkanIzinJanganGanggu() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.izin_judul)
-            .setMessage(R.string.izin_pesan)
-            .setPositiveButton(R.string.izin_buka) { _, _ ->
-                // Membuka Pengaturan membuat aplikasi ini berhenti sesaat. Tanpa
-                // penanda ini, alarm akan berbunyi padahal murid sedang menuruti
-                // permintaan aplikasi sendiri.
-                membukaPengaturan = true
-                penguncian.mintaIzinJanganGanggu()
+    private fun mulaiHitungDarurat() {
+        tombolBergetar()
+        progresDarurat.progress = 0
+        hitungDarurat.text = (Konfig.TAHAN_DARURAT_MS / 1000).toString()
+        lapisanDarurat.alpha = 0f
+        lapisanDarurat.visibility = View.VISIBLE
+        lapisanDarurat.animate().alpha(1f).setDuration(160).setListener(null).start()
+        lembarDarurat.translationY = 240f
+        lembarDarurat.animate().translationY(0f).setInterpolator(DecelerateInterpolator()).setDuration(260).start()
+
+        var dibatalkan = false
+        animasiDarurat = ValueAnimator.ofInt(0, progresDarurat.max).apply {
+            duration = Konfig.TAHAN_DARURAT_MS
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                val nilai = it.animatedValue as Int
+                progresDarurat.progress = nilai
+                val sisa = ceil((1 - it.animatedFraction) * Konfig.TAHAN_DARURAT_MS / 1000.0).toInt()
+                hitungDarurat.text = sisa.coerceAtLeast(0).toString()
             }
-            .setNegativeButton(R.string.izin_nanti, null)
-            .setCancelable(false)
-            .show()
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationCancel(animasi: Animator) { dibatalkan = true }
+                override fun onAnimationEnd(animasi: Animator) {
+                    if (!dibatalkan) jalankanDarurat()
+                }
+            })
+            start()
+        }
+    }
+
+    private fun batalkanHitungDarurat() {
+        animasiDarurat?.cancel()
+        animasiDarurat = null
+        if (lapisanDarurat.visibility == View.VISIBLE) sembunyikan(lapisanDarurat)
+    }
+
+    private fun jalankanDarurat() {
+        animasiDarurat = null
+        tombolBergetar()
+        penguncian.bunyikanAlarm()
+        ambilIdentitas { sesi, nis ->
+            if (sesi != null && nis != null) catatDarurat(sesi, nis)
+            bolehKeluar = true
+            penguncian.selesai()
+            finish()
+        }
+    }
+
+    private fun tombolBergetar() {
+        findViewById<View>(R.id.tombol_keluar).performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 
     // ── Keluar dengan kode guru ─────────────────────────────────────────────
 
-    private fun tanyaKodeKeluar() {
-        val isian = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-            hint = getString(R.string.keluar_petunjuk)
-        }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.keluar_judul)
-            .setMessage(R.string.keluar_pesan)
-            .setView(isian)
-            .setPositiveButton(R.string.keluar_periksa) { _, _ -> periksaKode(isian.text.toString().trim()) }
-            .setNegativeButton(R.string.keluar_batal, null)
-            .show()
-    }
-
-    private fun periksaKode(kode: String) {
-        if (kode.length != 6) {
-            Toast.makeText(this, R.string.keluar_enam_digit, Toast.LENGTH_SHORT).show()
-            return
-        }
+    private fun bukaKodeKeluar() {
+        if (dialogKeluar?.isShowing == true) return
         ambilIdentitas { sesi, nis ->
             if (sesi == null || nis == null) {
                 Toast.makeText(this, R.string.keluar_belum_masuk, Toast.LENGTH_LONG).show()
                 return@ambilIdentitas
             }
-            labelStatus.setText(R.string.status_memeriksa)
-            pekerja.execute {
-                val hasil = Api.kodeKeluar(sesi, nis, kode)
-                tangan.post {
-                    if (hasil.ok) {
-                        bolehKeluar = true
-                        labelStatus.setText(R.string.status_terbuka)
-                        penguncian.selesai()
-                        finish()
-                    } else {
+            val dialog = DialogKodeKeluar(this, sesi, nis, object : DialogKodeKeluar.Pendengar {
+                override fun periksa(kode: String, jawab: (Boolean, String) -> Unit) {
+                    periksaKode(sesi, nis, kode, jawab)
+                }
+
+                override fun berhasil() {
+                    bolehKeluar = true
+                    dialogKeluar?.dismiss()
+                    penguncian.selesai()
+                    finish()
+                }
+            })
+            dialogKeluar = dialog
+            dialog.show()
+        }
+    }
+
+    private fun periksaKode(sesi: String, nis: String, kode: String, jawab: (Boolean, String) -> Unit) {
+        pekerja.execute {
+            val hasil = Api.kodeKeluar(sesi, nis, kode)
+            tangan.post {
+                when {
+                    hasil.ok -> {
+                        salahBerturut = 0
+                        jawab(true, "")
+                    }
+                    hasil.jaringan -> jawab(false, getString(R.string.keluar_tanpa_jaringan))
+                    hasil.kodeSalah -> {
                         salahBerturut++
-                        labelStatus.setText(R.string.status_terkunci)
-                        Toast.makeText(this, hasil.pesan, Toast.LENGTH_LONG).show()
-                        if (salahBerturut >= Konfig.BATAS_SALAH) {
+                        val sisa = Konfig.BATAS_SALAH - salahBerturut
+                        if (sisa <= 0) {
                             salahBerturut = 0
                             penguncian.bunyikanAlarm()
+                            jawab(false, getString(R.string.keluar_salah_alarm))
+                        } else {
+                            jawab(false, getString(R.string.keluar_salah_sisa, sisa))
                         }
                     }
+                    // Sesi ditutup, sesi lama tanpa kode, dan sebagainya: pesan
+                    // server sudah ditulis untuk dibaca manusia.
+                    else -> jawab(false, hasil.pesan)
                 }
             }
         }
     }
 
-    // ── Jalur darurat ───────────────────────────────────────────────────────
+    // ── Izin Jangan Ganggu ──────────────────────────────────────────────────
 
-    private fun mulaiHitungDarurat() {
-        batalkanHitungDarurat()
-        val tugas = Runnable {
-            penguncian.bunyikanAlarm()
-            ambilIdentitas { sesi, nis ->
-                if (sesi != null && nis != null) catatDarurat(sesi, nis)
-                bolehKeluar = true
-                penguncian.selesai()
-                finish()
-            }
+    private fun tawarkanIzinJanganGanggu() {
+        val dialog = Dialog(this, R.style.Tema_PyClass_Kartu)
+        dialog.setContentView(R.layout.dialog_izin)
+        dialog.setCancelable(false)
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialog.findViewById<View>(R.id.tombol_izin_buka).setOnClickListener {
+            dialog.dismiss()
+            // Membuka Pengaturan membuat aplikasi ini berhenti sesaat. Tanpa
+            // penanda ini, alarm akan berbunyi padahal murid sedang menuruti
+            // permintaan aplikasi sendiri.
+            membukaPengaturan = true
+            penguncian.mintaIzinJanganGanggu()
         }
-        tahanDarurat = tugas
-        tangan.postDelayed(tugas, Konfig.TAHAN_DARURAT_MS)
+        dialog.findViewById<View>(R.id.tombol_izin_nanti).setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
-    private fun batalkanHitungDarurat() {
-        tahanDarurat?.let { tangan.removeCallbacks(it) }
-        tahanDarurat = null
-    }
+    // ── Jalur darurat: catatan untuk guru ───────────────────────────────────
 
     /**
      * Kejadian darurat disimpan dulu, lalu dikirim. Kalau jaringan mati —
@@ -257,6 +360,8 @@ class MainActivity : Activity() {
         }
     }
 
+    // ── Identitas murid ─────────────────────────────────────────────────────
+
     /**
      * Identitas diambil dari penyimpanan situs, bukan ditanyakan lagi ke murid:
      * satu sumber data, dan tidak mungkin salah ketik NIS.
@@ -278,6 +383,23 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * Menyalin sesi dan NIS ke penyimpanan aplikasi tiap 30 detik, dan
+     * memperbarui chip status. PenerimaMati membutuhkan identitas itu saat HP
+     * dimatikan, dan saat itu WebView sudah tidak bisa ditanya.
+     */
+    private fun pantauIdentitas() {
+        ambilIdentitas { sesi, nis ->
+            ujianBerjalan = sesi != null && nis != null
+            labelStatus.setText(if (ujianBerjalan) R.string.status_berjalan else R.string.status_siap)
+            if (sesi != null && nis != null) {
+                getSharedPreferences("pyclass", Context.MODE_PRIVATE).edit()
+                    .putString("sesi", sesi).putString("nis", nis).apply()
+            }
+        }
+        tangan.postDelayed({ pantauIdentitas() }, 30_000)
+    }
+
     // ── Daur hidup ──────────────────────────────────────────────────────────
 
     override fun onResume() {
@@ -294,12 +416,15 @@ class MainActivity : Activity() {
      */
     override fun onPause() {
         super.onPause()
+        batalkanHitungDarurat()
         val sengaja = bolehKeluar || membukaPengaturan || isFinishing
         // Sebelum murid masuk ujian, keluar aplikasi bukan pelanggaran apa pun.
         if (!sengaja && ujianBerjalan) penguncian.bunyikanAlarm()
     }
 
     override fun onDestroy() {
+        tangan.removeCallbacksAndMessages(null)
+        dialogKeluar?.dismiss()
         penguncian.selesai()
         pekerja.shutdown()
         super.onDestroy()
@@ -309,5 +434,10 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION", "MissingSuperCall")
     override fun onBackPressed() {
         Toast.makeText(this, R.string.kembali_dimatikan, Toast.LENGTH_SHORT).show()
+    }
+
+    private companion object {
+        /** Tekanan lebih lama dari ini dianggap menahan, bukan mengetuk. */
+        const val AMBANG_TAHAN_MS = 600L
     }
 }

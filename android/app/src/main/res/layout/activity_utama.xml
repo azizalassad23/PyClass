@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Layar utama: bilah atas, WebView situs PyClass, dan tiga lapisan yang
+    menimpa WebView saat dibutuhkan — memuat, tanpa koneksi, dan keluar darurat.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/krem">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Bilah atas -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:background="@color/tinta"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="18dp"
+            android:paddingEnd="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:text="@string/merek"
+                android:textColor="@color/krem"
+                android:textSize="21sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/bg_chip_gelap"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="12dp">
+
+                <View
+                    android:id="@+id/titik_status"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_titik_status" />
+
+                <TextView
+                    android:id="@+id/label_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="7dp"
+                    android:text="@string/status_siap"
+                    android:textColor="@color/krem"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tombol_keluar"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_tombol_garis_terang"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="@string/tombol_keluar"
+                android:textColor="@color/krem"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progres_muat"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:max="100"
+            android:maxHeight="3dp"
+            android:minHeight="3dp"
+            android:progressDrawable="@drawable/progres_muat" />
+
+        <WebView
+            android:id="@+id/web"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <!-- Lapisan memuat: tampil sampai halaman pertama selesai dimuat. -->
+    <LinearLayout
+        android:id="@+id/lapisan_muat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="60dp"
+        android:background="@color/krem"
+        android:clickable="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="36dp">
+
+        <FrameLayout
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:background="@drawable/bg_lingkaran_ikon">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_gembok"
+                android:tint="@color/jingga" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="serif"
+            android:gravity="center"
+            android:text="@string/muat_judul"
+            android:textColor="@color/tinta"
+            android:textSize="25sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:lineSpacingExtra="3dp"
+            android:maxWidth="320dp"
+            android:text="@string/muat_pesan"
+            android:textColor="@color/redup"
+            android:textSize="15sp" />
+
+        <ProgressBar
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="30dp"
+            android:indeterminateTint="@color/jingga" />
+    </LinearLayout>
+
+    <!-- Lapisan tanpa koneksi -->
+    <LinearLayout
+        android:id="@+id/lapisan_offline"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="60dp"
+        android:background="@color/krem"
+        android:clickable="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="36dp"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:background="@drawable/bg_lingkaran_ikon">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_awan_mati"
+                android:tint="@color/jingga" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="serif"
+            android:gravity="center"
+            android:text="@string/offline_judul"
+            android:textColor="@color/tinta"
+            android:textSize="25sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:lineSpacingExtra="3dp"
+            android:maxWidth="320dp"
+            android:text="@string/offline_pesan"
+            android:textColor="@color/redup"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tombol_coba_lagi"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_tombol_primer"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            android:text="@string/offline_coba_lagi"
+            android:textColor="@color/permukaan"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Lapisan keluar darurat: tampil selama tombol Keluar ditahan. -->
+    <FrameLayout
+        android:id="@+id/lapisan_darurat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/tirai"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/lembar_darurat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_lembar_bawah"
+            android:orientation="vertical"
+            android:paddingStart="28dp"
+            android:paddingTop="28dp"
+            android:paddingEnd="28dp"
+            android:paddingBottom="36dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/bg_lingkaran_ikon">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_alarm"
+                        android:tint="@color/jingga_tua" />
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_weight="1"
+                    android:fontFamily="serif"
+                    android:text="@string/darurat_judul"
+                    android:textColor="@color/tinta"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/hitung_darurat"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:text="10"
+                    android:textColor="@color/jingga_tua"
+                    android:textSize="30sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:lineSpacingExtra="3dp"
+                android:text="@string/darurat_pesan"
+                android:textColor="@color/badan"
+                android:textSize="14.5sp" />
+
+            <ProgressBar
+                android:id="@+id/progres_darurat"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:layout_marginTop="22dp"
+                android:max="1000"
+                android:maxHeight="10dp"
+                android:minHeight="10dp"
+                android:progressDrawable="@drawable/progres_darurat" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="@string/darurat_lepas"
+                android:textColor="@color/redup2"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

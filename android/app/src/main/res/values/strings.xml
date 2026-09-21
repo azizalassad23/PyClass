@@ -1,22 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PyClass Ujian</string>
+    <string name="merek">PyClass</string>
 
-    <string name="status_terkunci">Mode ujian — layar terkunci</string>
-    <string name="status_memeriksa">Memeriksa kode keluar…</string>
-    <string name="status_terbuka">Kunci dilepas</string>
-
+    <!-- Bilah atas -->
+    <string name="status_siap">Mode ujian</string>
+    <string name="status_berjalan">Ujian berlangsung</string>
     <string name="tombol_keluar">Keluar</string>
-    <string name="keluar_judul">Keluar dari aplikasi ujian</string>
-    <string name="keluar_pesan">Minta guru mengetikkan kode keluar sesi ini. Kode tidak sama dengan kode sesi.</string>
-    <string name="keluar_petunjuk">6 angka</string>
-    <string name="keluar_periksa">Periksa</string>
-    <string name="keluar_batal">Batal</string>
-    <string name="keluar_enam_digit">Kode keluar terdiri dari 6 angka.</string>
-    <string name="keluar_belum_masuk">Belum ada ujian yang sedang dikerjakan di aplikasi ini.</string>
 
-    <string name="izin_judul">Izinkan Jangan Ganggu</string>
-    <string name="izin_pesan">Supaya notifikasi tidak muncul saat ujian, aplikasi perlu izin Jangan Ganggu. Izin ini hanya dipakai selama ujian berlangsung.</string>
+    <!-- Lapisan memuat dan tanpa koneksi -->
+    <string name="muat_judul">Menyiapkan ruang ujian</string>
+    <string name="muat_pesan">Layar dikunci selama ujian. Notifikasi dibisukan dan tangkapan layar dimatikan.</string>
+    <string name="offline_judul">Tidak ada koneksi</string>
+    <string name="offline_pesan">PyClass belum bisa dimuat. Periksa Wi-Fi atau data seluler, lalu coba lagi. Jawaban yang sudah kamu tulis tetap tersimpan.</string>
+    <string name="offline_coba_lagi">Coba lagi</string>
+
+    <!-- Kode keluar -->
+    <string name="keluar_judul">Kode keluar</string>
+    <string name="keluar_pesan">Minta guru mengetikkan kode keluar sesi ini. Kode ini berbeda dari kode sesi di papan tulis.</string>
+    <string name="keluar_batal">Batal</string>
+    <string name="keluar_hapus">Hapus satu angka</string>
+    <string name="keluar_identitas">Sesi %1$s · NIS %2$s</string>
+    <string name="keluar_salah_sisa">Kode salah. %1$d percobaan lagi sebelum alarm berbunyi.</string>
+    <string name="keluar_salah_alarm">Kode salah tiga kali. Alarm dibunyikan.</string>
+    <string name="keluar_tanpa_jaringan">Tidak bisa menghubungi server. Periksa jaringan, atau tahan tombol Keluar 10 detik untuk keluar darurat.</string>
+    <string name="keluar_belum_masuk">Belum ada ujian yang sedang dikerjakan di aplikasi ini.</string>
+    <string name="keluar_berhasil_judul">Kunci dilepas</string>
+    <string name="keluar_berhasil_pesan">Guru mengizinkan kamu keluar. Aplikasi ditutup…</string>
+
+    <!-- Keluar darurat -->
+    <string name="darurat_judul">Keluar darurat</string>
+    <string name="darurat_pesan">Tahan terus tombol Keluar. Saat hitungan habis, alarm berbunyi, kunci dilepas, dan guru menerima catatannya.</string>
+    <string name="darurat_lepas">Lepas tombol untuk membatalkan</string>
+
+    <!-- Izin Jangan Ganggu -->
+    <string name="izin_judul">Bisukan notifikasi</string>
+    <string name="izin_pesan">Supaya pesan dan notifikasi tidak muncul selama ujian, izinkan PyClass memakai mode Jangan Ganggu. Izin ini hanya aktif selama ujian dan dikembalikan saat kamu keluar.</string>
     <string name="izin_buka">Buka pengaturan</string>
     <string name="izin_nanti">Nanti saja</string>
 

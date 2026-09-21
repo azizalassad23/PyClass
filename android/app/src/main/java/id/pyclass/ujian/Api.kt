@@ -14,7 +14,17 @@ import java.net.URL
  */
 object Api {
 
-    data class Hasil(val ok: Boolean, val pesan: String)
+    /**
+     * [jaringan] benar bila server tidak bisa dihubungi sama sekali, supaya
+     * aplikasi tidak menghitungnya sebagai kode salah.
+     */
+    data class Hasil(val ok: Boolean, val pesan: String, val jaringan: Boolean = false) {
+        /**
+         * Cocok dengan pesan aksiKodeKeluar di Code.gs. Hanya kode yang benar-benar
+         * salah yang dihitung menuju alarm; sesi ditutup dan sejenisnya tidak.
+         */
+        val kodeSalah: Boolean get() = !ok && !jaringan && pesan == "Kode keluar salah."
+    }
 
     /** Guru memasukkan kode keluar di HP murid. Kode hanya dibandingkan di server. */
     fun kodeKeluar(sesi: String, nis: String, kode: String): Hasil =
@@ -30,7 +40,7 @@ object Api {
             val obj = JSONObject(jawaban)
             Hasil(obj.optBoolean("ok", false), obj.optString("pesan", ""))
         } catch (e: Exception) {
-            Hasil(false, "Tidak bisa menghubungi server: " + (e.message ?: "jaringan bermasalah"))
+            Hasil(false, "Tidak bisa menghubungi server: " + (e.message ?: "jaringan bermasalah"), jaringan = true)
         }
     }
 

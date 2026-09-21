@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kartu permintaan izin Jangan Ganggu. Padding luar menjadi jarak kartu dari tepi layar. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_kartu"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="28dp">
+
+        <FrameLayout
+            android:layout_width="68dp"
+            android:layout_height="68dp"
+            android:background="@drawable/bg_lingkaran_ikon">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_lonceng_mati"
+                android:tint="@color/jingga" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:fontFamily="serif"
+            android:gravity="center"
+            android:text="@string/izin_judul"
+            android:textColor="@color/tinta"
+            android:textSize="23sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:lineSpacingExtra="3dp"
+            android:text="@string/izin_pesan"
+            android:textColor="@color/redup"
+            android:textSize="14.5sp" />
+
+        <TextView
+            android:id="@+id/tombol_izin_buka"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_tombol_primer"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="@string/izin_buka"
+            android:textColor="@color/permukaan"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tombol_izin_nanti"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_tombol_teks"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="@string/izin_nanti"
+            android:textColor="@color/redup"
+            android:textSize="14.5sp" />
+    </LinearLayout>
+</FrameLayout>
