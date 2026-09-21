@@ -33,11 +33,27 @@
     <string name="darurat_pesan">Tahan terus tombol Keluar. Saat hitungan habis, alarm berbunyi, kunci dilepas, dan guru menerima catatannya.</string>
     <string name="darurat_lepas">Lepas tombol untuk membatalkan</string>
 
-    <!-- Izin Jangan Ganggu -->
-    <string name="izin_judul">Bisukan notifikasi</string>
-    <string name="izin_pesan">Supaya pesan dan notifikasi tidak muncul selama ujian, izinkan PyClass memakai mode Jangan Ganggu. Izin ini hanya aktif selama ujian dan dikembalikan saat kamu keluar.</string>
-    <string name="izin_buka">Buka pengaturan</string>
-    <string name="izin_nanti">Nanti saja</string>
+    <!-- Layar persiapan: gerbang sebelum mode ujian -->
+    <string name="persiapan_judul">Persiapan ujian</string>
+    <string name="persiapan_pesan">Penuhi tiga syarat di bawah. Setelah semuanya tercentang, layar dikunci dan ujian bisa dimulai.</string>
+    <string name="persiapan_mulai">Mulai mode ujian</string>
+    <string name="persiapan_catatan">Android akan bertanya “Sematkan aplikasi?”. Pilih Mengerti atau Sematkan agar ujian bisa dimulai.</string>
+    <string name="persiapan_belum_lengkap">Masih ada syarat yang belum terpenuhi.</string>
+    <string name="persiapan_sematan_ditolak">Layar belum tersemat. Tekan Mulai mode ujian lagi, lalu setujui permintaan “Sematkan aplikasi” dari Android.</string>
+    <string name="persiapan_tanpa_halaman_izin">HP ini tidak punya halaman izin Jangan Ganggu. Cari “Akses Jangan Ganggu” di Pengaturan, atau kerjakan ujian di komputer lab.</string>
+    <string name="terlepas_judul">Kunci layar terlepas</string>
+    <string name="terlepas_pesan">Sematan layar dilepas di tengah ujian, jadi alarm dibunyikan. Soal ditutup sampai layar dikunci kembali.</string>
+    <string name="terlepas_mulai">Kunci kembali</string>
+
+    <string name="syarat_izin_judul">Izin Jangan Ganggu</string>
+    <string name="syarat_izin_ket">Supaya aplikasi bisa membisukan notifikasi selama ujian.</string>
+    <string name="syarat_izin_tombol">Beri izin</string>
+    <string name="syarat_dnd_judul">Mode Jangan Ganggu aktif</string>
+    <string name="syarat_dnd_ket">Dinyalakan otomatis setelah izin diberikan. Pesan dan notifikasi tidak muncul.</string>
+    <string name="syarat_dnd_tombol">Nyalakan</string>
+    <string name="syarat_volume_judul">Volume alarm penuh</string>
+    <string name="syarat_volume_ket">Supaya peringatan terdengar guru bila kamu keluar dari ujian.</string>
+    <string name="syarat_volume_tombol">Naikkan</string>
 
     <string name="kembali_dimatikan">Tombol kembali dimatikan selama ujian.</string>
 </resources>

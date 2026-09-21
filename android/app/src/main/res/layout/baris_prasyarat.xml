@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Satu baris di layar persiapan: ikon, penjelasan, lalu tombol Atur atau tanda centang. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:background="@drawable/bg_kartu_kecil"
+    android:gravity="center_vertical"
+    android:minHeight="76dp"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="14dp">
+
+    <FrameLayout
+        android:id="@+id/lingkaran"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_lingkaran_ikon">
+
+        <ImageView
+            android:id="@+id/ikon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="10dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/judul"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/tinta"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/keterangan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:lineSpacingExtra="1dp"
+            android:textColor="@color/redup"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tombol"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_tombol_primer_kecil"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:textColor="@color/krem"
+        android:textSize="13.5sp"
+        android:textStyle="bold" />
+
+    <FrameLayout
+        android:id="@+id/tanda_ok"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@drawable/bg_lingkaran_berhasil"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_centang"
+            android:tint="@color/daun_tua" />
+    </FrameLayout>
+</LinearLayout>
