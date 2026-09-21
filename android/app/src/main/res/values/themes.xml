@@ -26,7 +26,7 @@
         <item name="android:backgroundDimAmount">0.55</item>
     </style>
 
-    <style name="Animasi.Naik">
+    <style name="Animasi.Naik" parent="@android:style/Animation">
         <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
         <item name="android:windowExitAnimation">@android:anim/fade_out</item>
     </style>
