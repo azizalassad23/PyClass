@@ -41,6 +41,15 @@ export const PAKET: DefinisiPaket[] = [
     // U1 (tq-p1..6) → U2 (tq-p7..13) → U3 (tq-p14..20), mudah → sulit di tiap unit.
     posisi: Array.from({ length: 20 }, (_, i) => `tq-p${i + 1}`),
   },
+  {
+    paket: 'term-1',
+    judul: 'Term Quiz 1',
+    subjudul: 'Unit 1–3 · 15 soal berbahasa Inggris',
+    jenis: 'termquiz',
+    durasiMenit: 55,
+    // U1 (tq2-p1..5) → U2 (tq2-p6..10) → U3 (tq2-p11..15), mudah → sulit di tiap unit.
+    posisi: Array.from({ length: 15 }, (_, i) => `tq2-p${i + 1}`),
+  },
   { paket: 'kuis-u1', judul: 'Kuis Unit 1', subjudul: 'Variabel & Tipe Data', jenis: 'kuis', durasiMenit: 20,
     posisi: ['u1-p1', 'u1-p2', 'u1-p3', 'u1-p4', 'u1-p5'] },
   { paket: 'kuis-u2', judul: 'Kuis Unit 2', subjudul: 'Operator & I/O', jenis: 'kuis', durasiMenit: 20,

@@ -635,11 +635,19 @@ var POSISI_PRA_TERM = (function () {
   return p;
 })();
 
+/** Term Quiz 1: 15 posisi (tq2-p1 … tq2-p15), soal berbahasa Inggris dari Unit 1–3. */
+var POSISI_TERM_1 = (function () {
+  var p = [];
+  for (var i = 1; i <= 15; i++) p.push('tq2-p' + i);
+  return p;
+})();
+
 function posisiPaket(paket) {
   var peta = {
     'uts-ganjil': ['u1-p1', 'u1-p4', 'u2-p1', 'u2-p2', 'u1-p2', 'u2-p5', 'u3-p1', 'u3-p5', 'u3-p2', 'u3-p3'],
     'uas-genap':  ['u1-p3', 'u2-p3', 'u3-p2', 'u4-p2', 'u4-p5', 'u5-p1', 'u6-p1', 'u6-p3', 'u7-p2', 'u7-p4'],
-    'pra-term':   POSISI_PRA_TERM
+    'pra-term':   POSISI_PRA_TERM,
+    'term-1':     POSISI_TERM_1
   };
   if (peta[paket]) return peta[paket];
   var cocok = /^kuis-(u\d)$/.exec(paket);
@@ -654,13 +662,15 @@ function judulPaket(paket) {
   if (paket === 'uts-ganjil') return 'Ujian Tengah Semester';
   if (paket === 'uas-genap') return 'Ujian Akhir Semester';
   if (paket === 'pra-term') return 'Pra-Term Quiz';
+  if (paket === 'term-1') return 'Term Quiz 1';
   var cocok = /^kuis-u(\d)$/.exec(paket);
   return cocok ? 'Kuis Unit ' + cocok[1] : paket;
 }
 
 /** Jenis penilaian menentukan sheet nilai tujuan. */
 function jenisPaket(paket) {
-  if (paket === 'pra-term') return 'termquiz';
+  // Semua term quiz masuk ke sheet "<Kelas> — Term Quiz"; kolom Paket membedakannya.
+  if (paket === 'pra-term' || /^term-/.test(paket)) return 'termquiz';
   if (/^kuis-/.test(paket)) return 'kuis';
   return 'ujian';
 }
