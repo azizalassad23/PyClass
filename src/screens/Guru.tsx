@@ -127,6 +127,10 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
       setSesi(s);
       setRekap([]);
       setDimuatPada(Date.now());
+      // Jawaban "buka sesi" tidak membawa keadaan TERM QUIZ; ambil ulang supaya
+      // keterangan "TERM QUIZ tetap berjalan" langsung tampil.
+      const lengkap = await sesiKelas(pin, kelas);
+      if (lengkap?.kode === s.kode) setSesi(lengkap);
     } catch (e) {
       setGalat((e as Error).message);
     } finally {
@@ -249,6 +253,27 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
               </span>
             )}
           </div>
+
+          {/* Kartu sesi hanya menampilkan sesi terbaru. Saat sesi lain (misalnya uji
+              coba) sedang tampil, TERM QUIZ tetap berjalan di belakang — katakan itu,
+              supaya guru tidak mengira TERM QUIZ tertimpa atau perlu dibuka ulang. */}
+          {sesi && sesi.kode !== TERM_QUIZ.kode && sesi.termQuiz?.status === 'berjalan' && (
+            <div
+              role="status"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16,
+                background: 'var(--leaf-wash)', border: '1px solid var(--leaf-line)', borderRadius: 'var(--r-md)',
+                padding: '12px 16px', fontSize: 13.5, color: 'var(--body)', lineHeight: 1.6,
+              }}
+            >
+              <span className="pill pill--leaf">tetap berjalan</span>
+              <span style={{ flex: '1 1 320px' }}>
+                <b>{TERM_QUIZ.judul}</b> (<span style={{ fontFamily: 'var(--mono)' }}>{TERM_QUIZ.kode}</span>) tetap
+                berjalan dan tidak tertimpa. Kartu di bawah menampilkan sesi <b style={{ fontFamily: 'var(--mono)' }}>{sesi.kode}</b>;
+                setelah sesi ini ditutup, {TERM_QUIZ.judul} tampil lagi di sini.
+              </span>
+            </div>
+          )}
 
           {sesi && (
             <section

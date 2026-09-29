@@ -83,9 +83,12 @@ export function cekSesi(kode: string): SesiInfo {
 export function sesiAktifKelas(kelas: Kelas): SesiInfo | null {
   pastikanSesiKhusus();
   // Sesi gabungan ('SEMUA') ikut terpakai oleh setiap kelas.
-  return semuaSesi().find(
-    (s) => (s.kelas === kelas || s.kelas === 'SEMUA') && s.status === 'berjalan',
-  ) ?? null;
+  const s = semuaSesi().find(
+    (x) => (x.kelas === kelas || x.kelas === 'SEMUA') && x.status === 'berjalan',
+  );
+  if (!s) return null;
+  const tq = semuaSesi().find((x) => x.kode === TERM_QUIZ.kode);
+  return { ...s, termQuiz: tq ? { kode: tq.kode, status: tq.status } : null };
 }
 
 export function bukaSesi(kelas: KelasSesi, paket: string, durasiMenit: number): SesiInfo {

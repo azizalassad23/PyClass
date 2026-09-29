@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { matikanSirene, nyalakanSirene, siapkanAudio } from './alarm';
+import { matikanSirene, siapkanAudio } from './alarm';
 import { baca, tulis } from './storage';
 
 /**
@@ -7,8 +7,8 @@ import { baca, tulis } from './storage';
  *
  * - Soal hanya terlihat dalam layar penuh; di luar itu layar ujian menutup soal
  *   dengan tirai (lihat Ujian.tsx).
- * - Keluar dari layar penuh membunyikan sirene sampai murid kembali, menambah
- *   hitungan, dan dilaporkan lewat `onKeluar` supaya tercatat di sheet.
+ * - Keluar dari layar penuh menambah hitungan (untuk papan pantau). Pelanggaran,
+ *   sirene, dan blokirnya diatur useAntiCheat, yang menerima `penuh` dari sini.
  * - Di Chrome komputer, tombol Esc dikunci (Keyboard Lock API): keluar harus
  *   dengan menahan Esc, jadi tidak terjadi karena salah pencet.
  *
@@ -70,29 +70,20 @@ interface OpsiLayarPenuh {
   /** `<kode sesi>:<NIS>` — hitungan disimpan per murid per sesi, tahan refresh. */
   kunci: string;
   aktif: boolean;
-  /** Murid baru saja keluar dari layar penuh; `ke` = hitungan ke berapa. */
-  onKeluar: (ke: number) => void;
-  /** Murid kembali ke layar penuh setelah `detik` di luar. */
-  onKembali: (detik: number) => void;
 }
 
-export function useLayarPenuh({ kunci, aktif, onKeluar, onKembali }: OpsiLayarPenuh) {
+export function useLayarPenuh({ kunci, aktif }: OpsiLayarPenuh) {
   const kHitung = `layarpenuh:${kunci}`;
   const [didukung] = useState(layarPenuhDidukung);
   const [penuh, setPenuh] = useState(sedangLayarPenuh);
   const [jumlahKeluar, setJumlahKeluar] = useState(() => baca<number>(kHitung, 0));
 
-  // Sirene hanya untuk KELUAR dari layar penuh. Halaman yang baru dimuat ulang
-  // memang tidak dalam layar penuh; itu cukup ditangani tirai, bukan alarm.
+  // Halaman yang baru dimuat ulang memang tidak dalam layar penuh; itu bukan
+  // "keluar". Hitungan baru bertambah setelah pernah masuk di halaman ini.
   const pernahPenuh = useRef(sedangLayarPenuh());
-  const keluarSejak = useRef<number | null>(null);
   const aktifRef = useRef(aktif);
   const hitungRef = useRef(jumlahKeluar);
-  const onKeluarRef = useRef(onKeluar);
-  const onKembaliRef = useRef(onKembali);
   aktifRef.current = aktif;
-  onKeluarRef.current = onKeluar;
-  onKembaliRef.current = onKembali;
 
   useEffect(() => {
     const berubah = () => {
@@ -102,12 +93,7 @@ export function useLayarPenuh({ kunci, aktif, onKeluar, onKembali }: OpsiLayarPe
 
       if (sekarang) {
         pernahPenuh.current = true;
-        matikanSirene();
         kunciEsc();
-        if (keluarSejak.current !== null) {
-          onKembaliRef.current(Math.round((Date.now() - keluarSejak.current) / 1000));
-          keluarSejak.current = null;
-        }
         return;
       }
 
@@ -116,9 +102,6 @@ export function useLayarPenuh({ kunci, aktif, onKeluar, onKembali }: OpsiLayarPe
       hitungRef.current = ke;
       tulis(kHitung, ke);
       setJumlahKeluar(ke);
-      keluarSejak.current = Date.now();
-      nyalakanSirene();
-      onKeluarRef.current(ke);
     };
     document.addEventListener('fullscreenchange', berubah);
     document.addEventListener('webkitfullscreenchange', berubah);
@@ -127,12 +110,6 @@ export function useLayarPenuh({ kunci, aktif, onKeluar, onKembali }: OpsiLayarPe
       document.removeEventListener('webkitfullscreenchange', berubah);
     };
   }, [kHitung]);
-
-  // Sirene tidak boleh tertinggal setelah ujian selesai atau layar ditutup.
-  useEffect(() => {
-    if (!aktif) matikanSirene();
-    return () => matikanSirene();
-  }, [aktif]);
 
   /** Mengakhiri pengawasan (setelah mengirim), lalu keluar layar penuh tanpa alarm. */
   const lepas = useCallback(() => {

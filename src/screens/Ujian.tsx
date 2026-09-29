@@ -73,22 +73,19 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
     setPesanReset(true);
   }, [paket.soal, identitas.sesi, identitas.nis, bersihkanKonsol]);
 
+  // Layar penuh wajib; soal ditutup tirai sampai murid kembali ke layar penuh.
+  const layar = useLayarPenuh({ kunci: kunciSesi, aktif: !mengirim });
+
+  // Pelanggaran (pindah tab, menu atas, keluar layar penuh), sirene, dan blokir.
   const {
     pindahTab, peringatan, tutupPeringatan, diblokirSampai, sisaBlokirDetik, terimaBukaBlokir,
   } = useAntiCheat({
     kunci: kunciSesi,
     aktif: !mengirim,
     durasiBlokirMenit: durasiBlokir,
+    layarPenuhOk: !layar.didukung || layar.penuh,
     onBlokirSelesai: resetProgres,
     onKejadian: (jenis, keterangan, ke) => catatKejadian(identitas, jenis, keterangan, ke),
-  });
-
-  // Layar penuh wajib. Keluar = sirene + tercatat; soal ditutup tirai sampai kembali.
-  const layar = useLayarPenuh({
-    kunci: kunciSesi,
-    aktif: !mengirim,
-    onKeluar: (ke) => catatKejadian(identitas, 'keluar-layar-penuh', 'keluar dari layar penuh, alarm berbunyi', ke),
-    onKembali: (detik) => catatKejadian(identitas, 'kembali-layar-penuh', `kembali setelah ${detik} detik di luar layar penuh`),
   });
 
   // Perangkat yang tidak mengizinkan layar penuh (iPhone) tetap boleh
@@ -646,8 +643,8 @@ function TiraiLayarPenuh({ jumlahKeluar, sisaUjianDetik, onMasuk }: {
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.65, margin: '0 0 22px', color: pernahKeluar ? '#e8ddd0' : 'var(--muted)' }}>
           {pernahKeluar
-            ? `Soal disembunyikan sampai kamu kembali. Sudah ${jumlahKeluar} kali keluar — setiap kejadian beserta lamanya dicatat.`
-            : 'Soal ditampilkan setelah layar penuh aktif. Keluar dari layar penuh akan membunyikan alarm dan tercatat di sheet guru.'}
+            ? `Soal disembunyikan sampai kamu kembali. Sudah ${jumlahKeluar} kali keluar dari layar penuh — setiap kejadian dan lamanya dicatat. Pelanggaran ke-3 memblokir pengerjaan dan mengosongkan jawabanmu.`
+            : 'Soal ditampilkan setelah layar penuh aktif. Keluar dari layar penuh, pindah tab, atau membuka menu dari atas layar dihitung pelanggaran; pelanggaran ke-3 memblokir pengerjaan dan mengosongkan jawabanmu.'}
         </p>
         <button type="button" className="btn btn--primary" style={{ fontSize: 17, padding: '15px 30px' }} onClick={onMasuk}>
           {pernahKeluar ? 'Kembali ke layar penuh' : 'Masuk layar penuh'}
@@ -679,7 +676,7 @@ function LayarBlokir({ judul, sisaBlokirDetik, durasiBlokir, sisaUjianDetik }: {
           Pengerjaan diblokir
         </span>
         <h1 style={{ fontSize: 'clamp(26px, 4vw, 34px)', lineHeight: 1.15, margin: '0 0 8px' }}>
-          Kamu keluar dari halaman ujian lebih dari sekali
+          Kamu meninggalkan ujian lebih dari dua kali
         </h1>
         <div
           aria-label="Sisa waktu blokir"

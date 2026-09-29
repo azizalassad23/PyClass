@@ -268,8 +268,9 @@ export function UjianMasuk({ khusus = false }: { khusus?: boolean }) {
             {memuat ? 'Memuat soal…' : terkunci ? 'Belum dibuka' : khusus ? 'Mulai TERM QUIZ' : 'Masuk Ujian'}
           </button>
           <p style={{ fontSize: 12, color: 'var(--muted-2)', margin: '14px 0 0', textAlign: 'center' }}>
-            Menekan tombol ini memulai timer dan membuka layar penuh. Keluar dari layar penuh membunyikan alarm
-            dan tercatat di sheet guru.
+            Menekan tombol ini memulai timer dan membuka layar penuh. Keluar layar penuh, pindah tab, atau membuka
+            menu dari atas layar membunyikan alarm dan tercatat; pelanggaran ke-3 memblokir pengerjaan dan
+            mengosongkan jawaban.
           </p>
 
           {MODE_DEMO && !khusus && (

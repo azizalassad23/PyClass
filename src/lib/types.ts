@@ -115,6 +115,12 @@ export interface SesiInfo {
    * perangkat murid. Kosong untuk sesi lama yang dibuka sebelum fitur ini ada.
    */
   kodeKeluar?: string;
+  /**
+   * Keadaan TERM QUIZ, hanya pada jawaban halaman guru. Kartu sesi menampilkan
+   * satu sesi saja, jadi ini dipakai untuk memberi tahu guru bahwa TERM QUIZ
+   * tetap berjalan ketika sesi lain sedang ditampilkan.
+   */
+  termQuiz?: { kode: string; status: 'berjalan' | 'ditutup' } | null;
 }
 
 /**

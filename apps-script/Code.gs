@@ -543,6 +543,18 @@ function tandaiStatusProgres(sesi, nis, status) {
   return false;
 }
 
+/**
+ * Keadaan sesi TERM QUIZ untuk halaman guru. Kartu sesi hanya menampilkan satu
+ * sesi (yang terbaru), jadi saat guru membuka sesi lain — misalnya uji coba —
+ * halaman guru tetap perlu tahu bahwa TERM QUIZ masih berjalan.
+ */
+function statusTermQuiz(data) {
+  for (var r = 1; r < data.length; r++) {
+    if (sesiKhusus(data[r][0])) return { kode: TERM_KHUSUS.kode, status: String(data[r][8]) };
+  }
+  return null;
+}
+
 function aksiSesiKelas(p) {
   pastikanPin(p.pin);
   pastikanSesiKhusus();
@@ -553,6 +565,7 @@ function aksiSesiKelas(p) {
       var hasil = objekSesi(s);
       // Aksi ini meminta PIN, jadi kode keluar boleh ikut untuk halaman guru.
       hasil.kodeKeluar = s.kodeKeluar || '';
+      hasil.termQuiz = statusTermQuiz(data);
       return hasil;
     }
   }

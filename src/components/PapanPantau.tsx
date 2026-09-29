@@ -232,7 +232,7 @@ export function PapanPantau(
           <thead>
             <tr>
               <th>Nama</th><th>Soal</th><th>Diisi</th><th>Contoh lulus</th>
-              <th>Di soal ini</th><th>Sisa waktu</th><th>Pindah tab</th><th>Kabar</th><th>Tambah waktu</th>
+              <th>Di soal ini</th><th>Sisa waktu</th><th>Pelanggaran</th><th>Kabar</th><th>Tambah waktu</th>
             </tr>
           </thead>
           <tbody>
@@ -372,9 +372,12 @@ export function PapanPantau(
         Murid mengirim kabar tiap 45 detik (tiap 15 detik saat diblokir), jadi angka di sini bisa tertinggal
         sekitar satu menit. Kabar yang berhenti lebih dari {AMBANG_HILANG_DETIK} detik ditandai <b>hilang</b> dan
         berbunyi sekali: HP dimatikan, aplikasi ditutup, atau jaringan putus. Mematikan HP tidak bisa dicegah dari
-        aplikasi mana pun, tetapi selalu terlihat di sini. Durasi sesi ini {durasiMenit} menit. Murid yang keluar dari halaman ujian lebih
-        dari sekali diblokir — kuis unit 10 menit, lainnya 30 menit — dan jawabannya dikosongkan saat blokir
-        berakhir, termasuk bila dibuka lebih awal oleh guru. Keluar lagi saat diblokir memulai ulang hitungannya.
+        aplikasi mana pun, tetapi selalu terlihat di sini. Durasi sesi ini {durasiMenit} menit.{' '}
+        <b>Pelanggaran</b> = pindah tab atau aplikasi, membuka menu dari atas layar, atau keluar dari layar penuh;
+        satu kejadian dihitung sekali. Pelanggaran ke-1 dan ke-2 berupa peringatan dan sirene; ke-3 memblokir —
+        kuis unit 10 menit, lainnya 30 menit — dan jawabannya dikosongkan saat blokir berakhir, termasuk bila dibuka
+        lebih awal oleh guru. Pelanggaran saat diblokir memulai ulang hitungannya. Rincian tiap kejadian ada di
+        sheet _Kecurangan.
       </p>
     </section>
   );
