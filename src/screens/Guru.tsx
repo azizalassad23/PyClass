@@ -250,7 +250,7 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
             )}
           </div>
 
-          {sesi ? (
+          {sesi && (
             <section
               style={{
                 display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -327,9 +327,18 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                 </p>
               </div>
             </section>
-          ) : (
+          )}
+
+          {/* TERM QUIZ berjalan terpisah dari sesi lain, jadi selama ia berjalan guru
+              tetap bisa membuka sesi baru — termasuk uji coba TERM QUIZ sebelum jam buka. */}
+          {(!sesi || sesi.kode === TERM_QUIZ.kode) && (
             <section className="card" style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: 19, margin: '0 0 12px' }}>Buka sesi baru</h2>
+              <h2 style={{ fontSize: 19, margin: '0 0 12px' }}>{sesi ? 'Buka sesi lain' : 'Buka sesi baru'}</h2>
+              {sesi && (
+                <p style={{ fontSize: 13, color: 'var(--muted-2)', margin: '-4px 0 14px', lineHeight: 1.6 }}>
+                  {TERM_QUIZ.judul} tetap berjalan dan tidak ikut tertutup oleh sesi yang dibuka di sini.
+                </p>
+              )}
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <label className="field" style={{ flex: '2 1 260px', marginBottom: 0 }}>
                   <span className="field__label">Paket</span>
@@ -342,9 +351,14 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                       if (p) setDurasiBaru(p.durasiMenit);
                     }}
                   >
-                    {/* Paket khusus (TERM QUIZ) dibuka dari menu beranda, bukan dari sini. */}
                     {PAKET.filter((p) => !p.khusus).map((p) => (
                       <option key={p.paket} value={p.paket}>{p.judul} — {p.subjudul}</option>
+                    ))}
+                    {/* Paket khusus dibuka murid dari menu beranda. Dibuka dari sini, ia
+                        menjadi sesi biasa dengan kode 6 digit dan TANPA batas jam: soalnya
+                        sama persis (7/5/3), cocok untuk uji coba guru sebelum jam buka. */}
+                    {PAKET.filter((p) => p.khusus).map((p) => (
+                      <option key={p.paket} value={p.paket}>{p.judul} — uji coba guru, pakai kode sesi, tanpa batas jam</option>
                     ))}
                   </select>
                 </label>
@@ -376,7 +390,7 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                   <span style={{ fontSize: 12.5, color: 'var(--muted-2)', lineHeight: 1.6 }}>
                     Satu kode sesi dan satu kode keluar dipakai {KELAS_LIST.join(', ')}. Murid tetap memilih
                     kelasnya sendiri, dan nilainya masuk ke sheet kelas itu. Membuka sesi ini menutup sesi
-                    kelas mana pun yang sedang berjalan.
+                    kelas mana pun yang sedang berjalan, kecuali {TERM_QUIZ.judul}.
                   </span>
                 </span>
               </label>
