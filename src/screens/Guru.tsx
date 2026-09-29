@@ -7,6 +7,7 @@ import {
 } from '../lib/api';
 import { angkaId, jam, sejakDetik, tanggalPanjang } from '../lib/format';
 import { NAMA_SHEET_JENIS, PAKET } from '../lib/paket';
+import { TERM_QUIZ } from '../lib/termQuiz';
 import { KELAS_LIST, type BarisRekap, type Kelas, type SesiInfo } from '../lib/types';
 import { baca, tulis } from '../lib/storage';
 
@@ -307,7 +308,11 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: 'var(--body)' }}>
                   Durasi {sesi.durasiMenit} menit
                   <br />
-                  Dibuka {jam(sesi.dibukaPada)} · tutup otomatis {jam(sesi.dibukaPada + sesi.durasiMenit * 60_000)}
+                  {/* TERM QUIZ tidak punya jam tutup: timer dihitung per murid sejak ia
+                      mulai, dan sesinya berakhir saat guru menekan Tutup sesi. */}
+                  {sesi.kode === TERM_QUIZ.kode
+                    ? <>Dibuka {jam(sesi.dibukaPada)} · ditutup manual oleh guru · {sesi.durasiMenit} menit per murid</>
+                    : <>Dibuka {jam(sesi.dibukaPada)} · tutup otomatis {jam(sesi.dibukaPada + sesi.durasiMenit * 60_000)}</>}
                   <br />
                   <span className={sesi.status === 'berjalan' ? 'pill pill--leaf' : 'pill pill--quiet'}>
                     {sesi.status === 'berjalan' ? 'Sesi berjalan' : 'Sesi ditutup'}
@@ -337,7 +342,8 @@ function PapanGuru({ pin, onKeluar }: { pin: string; onKeluar: () => void }) {
                       if (p) setDurasiBaru(p.durasiMenit);
                     }}
                   >
-                    {PAKET.map((p) => (
+                    {/* Paket khusus (TERM QUIZ) dibuka dari menu beranda, bukan dari sini. */}
+                    {PAKET.filter((p) => !p.khusus).map((p) => (
                       <option key={p.paket} value={p.paket}>{p.judul} — {p.subjudul}</option>
                     ))}
                   </select>

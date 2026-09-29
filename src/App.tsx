@@ -22,6 +22,8 @@ export default function App() {
           <Route path="/materi" element={<Materi />} />
           <Route path="/materi/:slug" element={<Materi />} />
           <Route path="/ujian" element={<UjianMasuk />} />
+          {/* TERM QUIZ: tanpa kode sesi, dibuka dari menu beranda. */}
+          <Route path="/term-quiz" element={<UjianMasuk khusus />} />
           <Route path="/ujian/kerjakan" element={<Ujian />} />
           <Route path="/ujian/hasil" element={<Hasil />} />
           <Route path="/guru" element={<Guru />} />

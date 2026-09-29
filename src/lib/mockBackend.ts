@@ -12,6 +12,7 @@ import { PAKET_BY_ID, type DefinisiPaket } from './paket';
 import { normalisasiKeluaran } from './format';
 import { hashSeed, kodeKonfirmasi, mulberry32, pilihAcak } from './rng';
 import { baca, daftarKunci, tulis } from './storage';
+import { TERM_QUIZ, termQuizTerbuka } from './termQuiz';
 import type {
   BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, PaketUjian, SesiInfo,
   Soal, SubmitPayload,
@@ -39,7 +40,28 @@ function simpanSesi(daftar: SesiInfo[]): void {
   tulis(K_SESI, daftar);
 }
 
+/** Meniru pastikanSesiKhusus di Code.gs: sesi TERM QUIZ dibuat pada akses pertama. */
+function pastikanSesiKhusus(): void {
+  const daftar = semuaSesi();
+  if (daftar.some((s) => s.kode === TERM_QUIZ.kode)) return;
+  const rand = mulberry32(hashSeed('keluar', TERM_QUIZ.kode, String(Date.now())));
+  daftar.push({
+    kode: TERM_QUIZ.kode, kelas: 'SEMUA', paket: TERM_QUIZ.paket, jenis: 'termquiz',
+    judul: TERM_QUIZ.judul, durasiMenit: TERM_QUIZ.durasiMenit, dibukaPada: TERM_QUIZ.bukaPada,
+    ditutupPada: null, status: 'berjalan', kodeKeluar: String(100000 + Math.floor(rand() * 900000)),
+  });
+  simpanSesi(daftar);
+}
+
+/** Meniru tolakSebelumBuka di Code.gs. */
+function tolakSebelumBuka(kode: string): void {
+  if (kode === TERM_QUIZ.kode && !termQuizTerbuka()) {
+    throw new Error(`${TERM_QUIZ.judul} baru dibuka ${TERM_QUIZ.labelBuka}.`);
+  }
+}
+
 export function cariSesi(kode: string): SesiInfo | null {
+  if (kode === TERM_QUIZ.kode) pastikanSesiKhusus();
   const cocok = semuaSesi().filter((s) => s.kode === kode);
   if (cocok.length === 0) return null;
   // Bila ada lebih dari satu (riwayat lama), yang berjalan selalu menang —
@@ -49,6 +71,7 @@ export function cariSesi(kode: string): SesiInfo | null {
 
 /** Dipakai layar masuk ujian sebelum soal diambil. */
 export function cekSesi(kode: string): SesiInfo {
+  tolakSebelumBuka(kode);
   const s = cariSesi(kode);
   if (!s) throw new Error(pesanKodeTakDikenal(kode));
   if (s.status !== 'berjalan') {
@@ -58,6 +81,7 @@ export function cekSesi(kode: string): SesiInfo {
 }
 
 export function sesiAktifKelas(kelas: Kelas): SesiInfo | null {
+  pastikanSesiKhusus();
   // Sesi gabungan ('SEMUA') ikut terpakai oleh setiap kelas.
   return semuaSesi().find(
     (s) => (s.kelas === kelas || s.kelas === 'SEMUA') && s.status === 'berjalan',
@@ -68,7 +92,9 @@ export function bukaSesi(kelas: KelasSesi, paket: string, durasiMenit: number): 
   const def = PAKET_BY_ID.get(paket);
   if (!def) throw new Error(`Paket ${paket} tidak dikenal`);
   // Sesi berjalan yang kelasnya beririsan ditutup; 'SEMUA' beririsan dengan semuanya.
+  // TERM QUIZ hanya ditutup guru secara langsung, tidak ikut tertutup di sini.
   const daftar = semuaSesi().map((s) =>
+    s.kode !== TERM_QUIZ.kode &&
     (s.kelas === kelas || s.kelas === 'SEMUA' || kelas === 'SEMUA') && s.status === 'berjalan'
       ? { ...s, status: 'ditutup' as const }
       : s,
@@ -137,7 +163,27 @@ function tanpaKunci(s: SoalBank): Soal {
   return { id, judul, unit, bobot, deskripsi, contoh, inputTersembunyi, kodeAwal };
 }
 
+/**
+ * Meniru susunKomposisi di Code.gs: sejumlah soal per tingkat dari seluruh soal
+ * berjenis paket ini, diurutkan dengan nilai acak per NIS, tanpa soal kembar.
+ */
+function susunKomposisi(def: DefinisiPaket, nis: string, kodeSesi: string): SoalBank[] {
+  const komposisi = def.komposisi!;
+  const hasil: SoalBank[] = [];
+  for (const tingkat of ['mudah', 'sedang', 'sulit'] as const) {
+    const nilai = (s: SoalBank) => mulberry32(hashSeed(nis, kodeSesi, s.id))();
+    const terpilih = [...BANK_BY_ID.values()]
+      .filter((s) => s.jenis === def.jenis && s.tingkat === tingkat)
+      .sort((a, b) => nilai(a) - nilai(b) || a.id.localeCompare(b.id))
+      .slice(0, komposisi[tingkat])
+      .sort((a, b) => a.unit.localeCompare(b.unit) || a.id.localeCompare(b.id));
+    hasil.push(...terpilih);
+  }
+  return hasil;
+}
+
 function susunSoal(def: DefinisiPaket, nis: string, kodeSesi: string): SoalBank[] {
+  if (def.komposisi) return susunKomposisi(def, nis, kodeSesi);
   const grup = grupSoal();
   return def.posisi.map((namaGrup, i) => {
     const kandidat = grup.get(namaGrup) ?? [];
@@ -149,6 +195,7 @@ function susunSoal(def: DefinisiPaket, nis: string, kodeSesi: string): SoalBank[
 }
 
 export function ambilPaket(kodeSesi: string, nis: string): PaketUjian {
+  tolakSebelumBuka(kodeSesi);
   const sesi = cariSesi(kodeSesi);
   if (!sesi) throw new Error(pesanKodeTakDikenal(kodeSesi));
   if (sesi.status !== 'berjalan') {

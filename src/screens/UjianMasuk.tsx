@@ -4,10 +4,17 @@ import { LencanaDemo, Logo } from '../components/Header';
 import { ambilPaket, cekSesi, daftarSesiDemo, MODE_DEMO } from '../lib/api';
 import { KELAS_LIST, type Kelas } from '../lib/types';
 import { simpanUjian } from '../lib/sesiUjian';
+import { sisaMenujuBuka, TERM_QUIZ, termQuizTerbuka } from '../lib/termQuiz';
 import { usePython } from '../python/PythonProvider';
 
-/** W3 — mockup 1f: identifikasi murid + kode sesi. */
-export function UjianMasuk() {
+/**
+ * W3 — mockup 1f: identifikasi murid + kode sesi.
+ *
+ * Dengan `khusus`, layar ini menjadi pintu TERM QUIZ: kode sesi tidak ditanyakan
+ * karena sudah tetap, dan tombol Mulai terkunci sampai jam buka. Jam di sini
+ * hanya untuk tampilan — server tetap menolak memberi soal sebelum jam buka.
+ */
+export function UjianMasuk({ khusus = false }: { khusus?: boolean }) {
   const navigate = useNavigate();
   const { fase, panaskan } = usePython();
 
@@ -25,7 +32,16 @@ export function UjianMasuk() {
   // F-E06 — Pyodide sudah diunduh sebelum timer mulai.
   useEffect(() => { panaskan(); }, [panaskan]);
 
-  const kodeSesi = digit.join('');
+  const kodeSesi = khusus ? TERM_QUIZ.kode : digit.join('');
+
+  // Hitung mundur menuju jam buka TERM QUIZ, diperbarui tiap detik.
+  const [sekarang, setSekarang] = useState(() => Date.now());
+  useEffect(() => {
+    if (!khusus) return;
+    const id = window.setInterval(() => setSekarang(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [khusus]);
+  const terkunci = khusus && !termQuizTerbuka(sekarang);
 
   const isiDigit = (i: number, nilai: string) => {
     const bersih = nilai.replace(/\D/g, '');
@@ -47,7 +63,7 @@ export function UjianMasuk() {
     const g: Record<string, string> = {};
     if (!nama.trim()) g.nama = 'Nama tidak boleh kosong.';
     if (!/^\d{4,10}$/.test(nis.trim())) g.nis = 'NIS harus berupa 4–10 angka.';
-    if (!/^\d{6}$/.test(kodeSesi)) g.sesi = 'Kode sesi terdiri dari 6 angka.';
+    if (!khusus && !/^\d{6}$/.test(kodeSesi)) g.sesi = 'Kode sesi terdiri dari 6 angka.';
     setGalat(g);
     return Object.keys(g).length === 0;
   };
@@ -94,21 +110,34 @@ export function UjianMasuk() {
           <LencanaDemo />
         </div>
         <span className="pill pill--brand" style={{ alignSelf: 'flex-start', marginBottom: 18, padding: '7px 16px', fontSize: 12.5 }}>
-          Masukkan kode sesi dari guru
+          {khusus ? 'Tanpa kode sesi' : 'Masukkan kode sesi dari guru'}
         </span>
         <h1 style={{ fontSize: 'clamp(32px, 4.6vw, 46px)', lineHeight: 1.08, margin: '0 0 14px', maxWidth: 440 }}>
-          Ujian & Kuis
+          {khusus ? TERM_QUIZ.judul : 'Ujian & Kuis'}
         </h1>
         <p style={{ fontSize: 16.5, lineHeight: 1.65, color: 'var(--muted)', margin: '0 0 30px', maxWidth: 420 }}>
-          Paket soal dan durasinya ditentukan oleh sesi yang dibuka guru. Pastikan perangkatmu terhubung internet
-          sebelum menekan Masuk.
+          {khusus
+            ? 'Soal berbahasa Inggris dari Unit 1–3. Setiap murid mendapat susunan soal yang berbeda. Pastikan perangkatmu terhubung internet sebelum menekan Mulai.'
+            : 'Paket soal dan durasinya ditentukan oleh sesi yang dibuka guru. Pastikan perangkatmu terhubung internet sebelum menekan Masuk.'}
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
-          <Fakta besar="10" judul="soal pemrograman" ket="diacak dari bank soal setara (kuis unit: 5 · Pra-Term Quiz: 20)" />
-          <Fakta besar="90" judul="menit" ket="timer tetap jalan meski halaman di-refresh (kuis unit: 20 · Pra-Term Quiz: 70)" />
-          <Fakta besar="✓" judul="jawaban tersimpan otomatis" ket="setiap 10 detik di perangkat ini" />
-        </div>
+        {khusus ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
+            <Fakta
+              besar={String(TERM_QUIZ.jumlahSoal)}
+              judul="soal pemrograman"
+              ket={`${TERM_QUIZ.komposisi.mudah} mudah · ${TERM_QUIZ.komposisi.sedang} sedang · ${TERM_QUIZ.komposisi.sulit} sulit, diacak per murid`}
+            />
+            <Fakta besar={String(TERM_QUIZ.durasiMenit)} judul="menit" ket="dihitung sejak kamu menekan Mulai, tetap jalan meski halaman di-refresh" />
+            <Fakta besar="✓" judul="jawaban tersimpan otomatis" ket="setiap 10 detik di perangkat ini" />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 420 }}>
+            <Fakta besar="10" judul="soal pemrograman" ket="diacak dari bank soal setara (kuis unit: 5 · Pra-Term Quiz: 20)" />
+            <Fakta besar="90" judul="menit" ket="timer tetap jalan meski halaman di-refresh (kuis unit: 20 · Pra-Term Quiz: 70)" />
+            <Fakta besar="✓" judul="jawaban tersimpan otomatis" ket="setiap 10 detik di perangkat ini" />
+          </div>
+        )}
       </section>
 
       <section className="masuk__kanan" style={{ position: 'relative' }}>
@@ -120,7 +149,7 @@ export function UjianMasuk() {
             padding: 'clamp(24px, 3vw, 34px)', boxShadow: 'var(--shadow-lg)',
           }}
         >
-          <h2 style={{ fontSize: 26, margin: '0 0 4px' }}>Masuk Ujian</h2>
+          <h2 style={{ fontSize: 26, margin: '0 0 4px' }}>{khusus ? 'Identitas' : 'Masuk Ujian'}</h2>
           <p style={{ fontSize: 13.5, color: 'var(--muted-2)', margin: '0 0 22px' }}>Isi persis seperti di daftar hadir.</p>
 
           <label className="field">
@@ -154,6 +183,7 @@ export function UjianMasuk() {
 
           {/* minWidth 0: fieldset bawaan browser memakai min-inline-size:min-content
               sehingga enam kotak digit menolak menyusut dan meluber keluar kartu. */}
+          {!khusus && (
           <fieldset style={{ border: 0, padding: 0, margin: '0 0 8px', minWidth: 0 }}>
             <legend className="field__label" style={{ padding: 0 }}>
               Kode Sesi <span className="field__hint">— ditulis guru di papan</span>
@@ -184,6 +214,23 @@ export function UjianMasuk() {
             </div>
             {galat.sesi && <span className="field__error">{galat.sesi}</span>}
           </fieldset>
+          )}
+
+          {terkunci && (
+            <div
+              role="status"
+              style={{
+                margin: '4px 0 0', background: 'var(--brand-wash)', border: '1px solid var(--brand-line)',
+                borderRadius: 'var(--r-sm)', padding: '14px 16px', fontSize: 13.5, color: 'var(--brand-deep)',
+                lineHeight: 1.6,
+              }}
+            >
+              <b>Belum dibuka.</b> {TERM_QUIZ.judul} dibuka {TERM_QUIZ.labelBuka}.
+              <br />
+              Dibuka dalam <b style={{ fontFamily: 'var(--mono)' }}>{sisaMenujuBuka(sekarang)}</b>. Kamu boleh
+              mengisi identitas sekarang.
+            </div>
+          )}
 
           <p
             style={{
@@ -210,14 +257,17 @@ export function UjianMasuk() {
             </p>
           )}
 
-          <button type="submit" className="btn btn--primary btn--block" style={{ fontSize: 17, padding: 16 }} disabled={memuat}>
-            {memuat ? 'Memuat soal…' : 'Masuk Ujian'}
+          <button
+            type="submit" className="btn btn--primary btn--block" style={{ fontSize: 17, padding: 16 }}
+            disabled={memuat || terkunci}
+          >
+            {memuat ? 'Memuat soal…' : terkunci ? 'Belum dibuka' : khusus ? 'Mulai TERM QUIZ' : 'Masuk Ujian'}
           </button>
           <p style={{ fontSize: 12, color: 'var(--muted-2)', margin: '14px 0 0', textAlign: 'center' }}>
             Menekan tombol ini memulai timer. Menyalin-tempel kode dinonaktifkan selama ujian.
           </p>
 
-          {MODE_DEMO && (
+          {MODE_DEMO && !khusus && (
             <div
               style={{
                 marginTop: 16, borderTop: '1px solid var(--line)', paddingTop: 14,

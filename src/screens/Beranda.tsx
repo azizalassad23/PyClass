@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
 import { UNITS, type Unit } from '../content/units';
@@ -5,6 +6,7 @@ import { halamanUnit } from '../content/loader';
 import { baca } from '../lib/storage';
 import type { TerakhirDibaca } from '../lib/jejakBelajar';
 import { unitSelesai } from '../lib/jejakBelajar';
+import { sisaMenujuBuka, TERM_QUIZ, termQuizTerbuka } from '../lib/termQuiz';
 
 /** W1 — mockup 1a: beranda dengan peta 8 unit sebagai kartu. */
 export function Beranda() {
@@ -73,6 +75,8 @@ export function Beranda() {
             <KartuUnit key={u.id} unit={u} selesai={selesai.has(u.id)} sedang={terakhir?.unit === u.id} />
           ))}
         </div>
+
+        <KartuTermQuiz />
       </section>
 
       <footer style={{ borderTop: '1px solid var(--line)', padding: '24px clamp(16px, 3vw, 32px) 40px' }}>
@@ -86,6 +90,77 @@ export function Beranda() {
         </div>
       </footer>
     </div>
+  );
+}
+
+/**
+ * Menu TERM QUIZ di bawah daftar unit. Sebelum jam buka, kartunya terkunci dan
+ * menampilkan hitung mundur. Jam perangkat hanya dipakai untuk tampilan; server
+ * yang menentukan kapan soal boleh diberikan.
+ */
+function KartuTermQuiz() {
+  const [sekarang, setSekarang] = useState(() => Date.now());
+  const terbuka = termQuizTerbuka(sekarang);
+  useEffect(() => {
+    if (terbuka) return;
+    const id = window.setInterval(() => setSekarang(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [terbuka]);
+
+  const isi = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+      <span
+        aria-hidden="true"
+        style={{
+          width: 56, height: 56, borderRadius: 999, flex: 'none',
+          background: terbuka ? 'var(--brand)' : 'var(--line)', color: terbuka ? '#fff' : 'var(--muted-2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'var(--display)', fontSize: 20,
+        }}
+      >
+        TQ
+      </span>
+      <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+          <h3 style={{ fontSize: 22, margin: 0, letterSpacing: '.01em' }}>{TERM_QUIZ.judul}</h3>
+          <span className={terbuka ? 'pill pill--brand' : 'pill pill--quiet'}>
+            {terbuka ? 'Dibuka' : 'Terkunci'}
+          </span>
+        </div>
+        <p style={{ fontSize: 13.5, lineHeight: 1.55, color: 'var(--muted)', margin: 0 }}>
+          {TERM_QUIZ.jumlahSoal} soal Unit 1–3 · {TERM_QUIZ.durasiMenit} menit sejak kamu mulai · tanpa kode sesi,
+          cukup nama, kelas, dan NIS
+        </p>
+        {!terbuka && (
+          <p style={{ fontSize: 13, color: 'var(--brand-deep)', margin: '6px 0 0' }}>
+            Dibuka {TERM_QUIZ.labelBuka} · <b style={{ fontFamily: 'var(--mono)' }}>{sisaMenujuBuka(sekarang)}</b> lagi
+          </p>
+        )}
+      </div>
+      <span
+        className={terbuka ? 'btn btn--primary' : 'btn btn--ghost'}
+        aria-hidden="true"
+        style={{ pointerEvents: 'none', opacity: terbuka ? 1 : 0.6 }}
+      >
+        {terbuka ? 'Mulai →' : 'Belum dibuka'}
+      </span>
+    </div>
+  );
+
+  const gaya: React.CSSProperties = {
+    display: 'block', marginTop: 20, textDecoration: 'none', color: 'inherit',
+    background: terbuka ? 'var(--brand-wash)' : 'var(--surface)',
+    border: terbuka ? '2px solid var(--brand)' : '1px dashed var(--line-strong)',
+    borderRadius: 'var(--r-xl)', padding: terbuka ? '21px 23px' : '22px 24px',
+    boxShadow: terbuka ? 'var(--shadow-sm)' : undefined,
+  };
+
+  // Terkunci tetap berupa tautan: halaman masuk menjelaskan kapan dibuka dan
+  // murid sudah bisa mengisi identitasnya lebih dulu.
+  return (
+    <Link to="/term-quiz" style={gaya} aria-label={`${TERM_QUIZ.judul}${terbuka ? '' : ', belum dibuka'}`}>
+      {isi}
+    </Link>
   );
 }
 

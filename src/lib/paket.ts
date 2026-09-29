@@ -1,3 +1,4 @@
+import { TERM_QUIZ } from './termQuiz';
 import type { JenisPenilaian } from './types';
 
 /**
@@ -12,6 +13,13 @@ export interface DefinisiPaket {
   jenis: JenisPenilaian;
   durasiMenit: number;
   posisi: string[];
+  /**
+   * Paket khusus tidak dibuka guru lewat formulir sesi, melainkan dari menu
+   * beranda dengan kode sesi tetap. Karena itu tidak muncul di pilihan paket.
+   */
+  khusus?: boolean;
+  /** Soal diambil per tingkat dari seluruh soal berjenis ini; `posisi` diabaikan. */
+  komposisi?: { mudah: number; sedang: number; sulit: number };
 }
 
 export const PAKET: DefinisiPaket[] = [
@@ -49,6 +57,16 @@ export const PAKET: DefinisiPaket[] = [
     durasiMenit: 55,
     // U1 (tq2-p1..5) → U2 (tq2-p6..10) → U3 (tq2-p11..15), mudah → sulit di tiap unit.
     posisi: Array.from({ length: 15 }, (_, i) => `tq2-p${i + 1}`),
+  },
+  {
+    paket: TERM_QUIZ.paket,
+    judul: TERM_QUIZ.judul,
+    subjudul: '15 soal acak dari seluruh soal term quiz · 7 mudah, 5 sedang, 3 sulit',
+    jenis: 'termquiz',
+    durasiMenit: TERM_QUIZ.durasiMenit,
+    posisi: [],
+    khusus: true,
+    komposisi: { ...TERM_QUIZ.komposisi },
   },
   { paket: 'kuis-u1', judul: 'Kuis Unit 1', subjudul: 'Variabel & Tipe Data', jenis: 'kuis', durasiMenit: 20,
     posisi: ['u1-p1', 'u1-p2', 'u1-p3', 'u1-p4', 'u1-p5'] },

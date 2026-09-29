@@ -25,6 +25,52 @@ var KELAS = ['XA', 'XB', 'XC', 'XD'];
 var KELAS_SEMUA = 'SEMUA';
 
 /**
+ * TERM QUIZ 1 2026/2027 — penilaian tanpa kode sesi.
+ *
+ * Murid masuk dari menu di beranda hanya dengan nama, kelas, dan NIS; kode
+ * sesinya tetap dan sudah tertanam di situs. Baris sesinya dibuat otomatis di
+ * _Sesi pada akses pertama, sehingga papan pantau, kode keluar, rekap, dan
+ * tombol Tutup sesi di halaman guru bekerja seperti sesi biasa.
+ *
+ * Jam buka diperiksa DI SINI dengan jam server Google, bukan jam HP murid:
+ * mengubah jam perangkat tidak membuka soal lebih awal. Sesi berakhir saat guru
+ * menekan Tutup sesi; untuk membukanya lagi, hapus barisnya di _Sesi.
+ */
+var TERM_KHUSUS = {
+  kode: 'TQ1-2627',
+  paket: 'term-1-2627',
+  judul: 'TERM QUIZ 1 2026/2027',
+  durasiMenit: 75,
+  buka: new Date('2026-09-29T11:14:00+07:00'),
+  labelBuka: 'Selasa, 29 September 2026 pukul 11.14 WIB',
+  // Diambil dari seluruh soal berjenis termquiz di _Bank, diacak per NIS.
+  komposisi: [['mudah', 7], ['sedang', 5], ['sulit', 3]]
+};
+
+function sesiKhusus(kode) { return String(kode) === TERM_KHUSUS.kode; }
+
+/** Pesan penolakan bila TERM QUIZ belum dibuka; null bila sudah boleh. */
+function tolakSebelumBuka(kode) {
+  if (!sesiKhusus(kode) || new Date() >= TERM_KHUSUS.buka) return null;
+  return TERM_KHUSUS.judul + ' baru dibuka ' + TERM_KHUSUS.labelBuka + '.';
+}
+
+/** Membuat baris sesi TERM QUIZ di _Sesi bila belum ada. Aman dipanggil berulang. */
+function pastikanSesiKhusus() {
+  var sheet = sheetSesi();
+  var data = sheet.getDataRange().getValues();
+  for (var r = 1; r < data.length; r++) {
+    if (sesiKhusus(data[r][0])) return;
+  }
+  var kodeKeluar = String(Math.floor(100000 + Math.random() * 900000));
+  sheet.appendRow([
+    TERM_KHUSUS.kode, KELAS_SEMUA, TERM_KHUSUS.paket, 'termquiz', TERM_KHUSUS.judul,
+    TERM_KHUSUS.durasiMenit, TERM_KHUSUS.buka, '', 'berjalan', kodeKeluar
+  ]);
+  catatLog('sesi', TERM_KHUSUS.judul + ' dibuat otomatis (kode ' + TERM_KHUSUS.kode + ')');
+}
+
+/**
  * Susunan kolom sheet nilai untuk n soal. Ujian & kuis memakai n = 10 (kuis
  * hanya mengisi 5 kolom pertama); Pra-Term Quiz memakai n = 20. Kolom sesudah
  * blok nilai soal ikut bergeser mengikuti n, jadi pembacaan indeksnya WAJIB
@@ -136,6 +182,8 @@ function json(obj) {
  * outputKunci dan kodeReferensi tidak pernah ikut (PRD §10).
  */
 function aksiSoal(p) {
+  var belum = tolakSebelumBuka(p.sesi);
+  if (belum) return { ok: false, pesan: belum };
   var sesi = cariSesi(p.sesi);
   if (!sesi || sesi.status !== 'berjalan') {
     return { ok: false, pesan: 'Sesi tidak ditemukan atau sudah ditutup' };
@@ -164,6 +212,8 @@ function aksiSoal(p) {
 }
 
 function aksiSesi(p) {
+  var belum = tolakSebelumBuka(p.kode);
+  if (belum) return { ok: false, pesan: belum };
   var sesi = cariSesi(p.kode);
   if (!sesi) return { ok: false, pesan: 'Sesi tidak ditemukan atau sudah ditutup' };
   return objekSesi(sesi);
@@ -175,6 +225,8 @@ function aksiSesi(p) {
  * _Bank, lalu menulis satu baris ke sheet nilai kelas.
  */
 function aksiNilai(b) {
+  var belum = tolakSebelumBuka(b.sesi);
+  if (belum) return { ok: false, pesan: belum };
   var sesi = cariSesi(b.sesi);
   if (!sesi || sesi.status !== 'berjalan') {
     catatLog('tolak', 'Submisi NIS ' + b.nis + ' — sesi ' + b.sesi + ' tidak aktif');
@@ -196,6 +248,24 @@ function aksiNilai(b) {
   b.paket = sesi.paket;
 
   var bank = petaBank();
+
+  // Soal yang dinilai adalah soal yang memang diberikan kepada murid ini,
+  // disusun ulang di server dari NIS dan kode sesi — bukan daftar kiriman
+  // browser. Tanpa ini, murid yang paham DevTools bisa membuang soal yang
+  // salah dari kirimannya dan tetap mendapat 100. Soal yang tidak dikirim
+  // bernilai 0; soal di luar daftar diabaikan.
+  var diberikan = susunSoal(sesi, String(b.nis || ''));
+  var kiriman = {};
+  for (var q = 0; q < (b.jawaban || []).length; q++) {
+    if (b.jawaban[q] && b.jawaban[q].soalId) kiriman[b.jawaban[q].soalId] = b.jawaban[q];
+  }
+  b.jawaban = diberikan.map(function (s) {
+    return kiriman[s.id] || { soalId: s.id, output: [], kode: '' };
+  });
+  // TERM QUIZ mencampur soal Pra-Term (bobot 5) dan Term Quiz 1 (bobot 1);
+  // semua soalnya dihitung sama berat.
+  var bobotSama = sesiKhusus(sesi.kode);
+
   var perSoal = [];
   var lulusTotal = 0;
   var testTotal = 0;
@@ -223,8 +293,9 @@ function aksiNilai(b) {
     perSoal.push({ soalId: soal.id, judul: soal.judul, lulus: lulus, total: kunci.length, nilai: nilaiSoal });
     lulusTotal += lulus;
     testTotal += kunci.length;
-    bobotTotal += soal.bobot;
-    nilaiBerbobot += nilaiSoal * soal.bobot;
+    var bobot = bobotSama ? 1 : soal.bobot;
+    bobotTotal += bobot;
+    nilaiBerbobot += nilaiSoal * bobot;
   }
 
   var nilai = bobotTotal === 0 ? 0 : Math.round(nilaiBerbobot / bobotTotal);
@@ -327,6 +398,9 @@ function aksiBukaSesi(b) {
   // semua kelas, jadi satu murid tidak pernah punya dua kode sesi yang sah.
   for (var r = 1; r < data.length; r++) {
     var beririsan = data[r][1] === b.kelas || data[r][1] === KELAS_SEMUA || b.kelas === KELAS_SEMUA;
+    // TERM QUIZ berjalan terpisah dan hanya ditutup guru secara langsung;
+    // membuka kuis kelas lain tidak boleh mematikannya.
+    if (sesiKhusus(data[r][0])) continue;
     if (beririsan && data[r][8] === 'berjalan') {
       sheet.getRange(r + 1, 8).setValue(new Date());
       sheet.getRange(r + 1, 9).setValue('ditutup');
@@ -424,6 +498,7 @@ function tandaiStatusProgres(sesi, nis, status) {
 
 function aksiSesiKelas(p) {
   pastikanPin(p.pin);
+  pastikanSesiKhusus();
   var data = sheetSesi().getDataRange().getValues();
   for (var r = data.length - 1; r >= 1; r--) {
     if ((data[r][1] === p.kelas || data[r][1] === KELAS_SEMUA) && data[r][8] === 'berjalan') {
@@ -580,6 +655,7 @@ function petaBank() {
       unit: String(baris[idx.unit] || ''),
       jenis: String(baris[idx.jenis] || 'keduanya'),
       grup: String(baris[idx.grup] || id),
+      tingkat: String(baris[idx.tingkat] || ''),
       bobot: Number(baris[idx.bobot]) || 10,
       judul: String(baris[idx.judul] || ''),
       deskripsi: String(baris[idx.deskripsi] || ''),
@@ -605,6 +681,7 @@ function pisah(sel) {
  */
 function susunSoal(sesi, nis) {
   var bank = petaBank();
+  if (sesi.paket === TERM_KHUSUS.paket) return susunKomposisi(bank, sesi, nis);
   var posisi = posisiPaket(sesi.paket);
   var hasil = [];
   for (var i = 0; i < posisi.length; i++) {
@@ -620,6 +697,40 @@ function susunSoal(sesi, nis) {
     kandidat.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
     var pilih = seedAngka(nis + '|' + sesi.kode + '|' + grup) % kandidat.length;
     hasil.push(kandidat[pilih]);
+  }
+  return hasil;
+}
+
+/**
+ * TERM QUIZ: sejumlah soal per tingkat diambil dari seluruh soal termquiz.
+ * Setiap soal diberi nilai acak yang ditentukan NIS + kode sesi + id soal, lalu
+ * diambil yang terkecil. Hasilnya tetap sama untuk murid yang sama (aman saat
+ * dimuat ulang), berbeda antar murid, dan tidak pernah ada soal kembar.
+ * Urutan: mudah, sedang, sulit; di dalam tiap tingkat diurutkan per unit.
+ */
+function susunKomposisi(bank, sesi, nis) {
+  var hasil = [];
+  for (var t = 0; t < TERM_KHUSUS.komposisi.length; t++) {
+    var tingkat = TERM_KHUSUS.komposisi[t][0];
+    var jumlah = TERM_KHUSUS.komposisi[t][1];
+    var kandidat = [];
+    for (var id in bank) {
+      if (bank[id].jenis === 'termquiz' && bank[id].tingkat === tingkat) kandidat.push(bank[id]);
+    }
+    if (kandidat.length < jumlah) {
+      catatLog('bank', TERM_KHUSUS.judul + ': soal ' + tingkat + ' hanya ' + kandidat.length + ', dibutuhkan ' + jumlah);
+    }
+    kandidat.sort(function (a, b) {
+      var sa = adukAngka(nis + '|' + sesi.kode + '|' + a.id);
+      var sb = adukAngka(nis + '|' + sesi.kode + '|' + b.id);
+      return sa !== sb ? sa - sb : (a.id < b.id ? -1 : 1);
+    });
+    var terpilih = kandidat.slice(0, jumlah);
+    terpilih.sort(function (a, b) {
+      if (a.unit !== b.unit) return a.unit < b.unit ? -1 : 1;
+      return a.id < b.id ? -1 : 1;
+    });
+    hasil = hasil.concat(terpilih);
   }
   return hasil;
 }
@@ -663,6 +774,7 @@ function judulPaket(paket) {
   if (paket === 'uas-genap') return 'Ujian Akhir Semester';
   if (paket === 'pra-term') return 'Pra-Term Quiz';
   if (paket === 'term-1') return 'Term Quiz 1';
+  if (paket === TERM_KHUSUS.paket) return TERM_KHUSUS.judul;
   var cocok = /^kuis-u(\d)$/.exec(paket);
   return cocok ? 'Kuis Unit ' + cocok[1] : paket;
 }
@@ -781,6 +893,7 @@ function tulisBarisNilai(b, nilai, lulusTotal, testTotal, perSoal, konfirmasi) {
 
 function cariSesi(kode) {
   if (!kode) return null;
+  if (sesiKhusus(kode)) pastikanSesiKhusus();
   var data = sheetSesi().getDataRange().getValues();
   for (var r = 1; r < data.length; r++) {
     if (String(data[r][0]) === String(kode)) return barisKeSesi(data[r]);
@@ -819,6 +932,23 @@ function normalisasi(teks) {
     .map(function (b) { return b.replace(/[ \t]+$/, ''); })
     .join('\n')
     .replace(/\n+$/, '');
+}
+
+/**
+ * seedAngka yang diaduk lagi (finalizer murmur3). seedAngka saja terlalu mirip
+ * untuk teks yang hanya beda di ujung, sehingga murid dengan NIS berurutan —
+ * yang biasanya duduk bersebelahan — bisa mendapat 15 soal yang persis sama.
+ * Hanya dipakai TERM QUIZ; varian soal kuis lain tetap memakai seedAngka supaya
+ * sesi yang sedang berjalan tidak berubah soalnya.
+ */
+function adukAngka(teks) {
+  var h = seedAngka(teks);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
+  return h >>> 0;
 }
 
 function seedAngka(teks) {
