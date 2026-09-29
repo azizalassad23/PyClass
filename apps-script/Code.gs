@@ -117,11 +117,22 @@ var KOLOM_LOG = ['Waktu', 'Jenis', 'Keterangan'];
 var KOLOM_PROGRES = [
   'Kode Sesi', 'Kelas', 'NIS', 'Nama', 'Soal Aktif', 'Total Soal', 'Diisi',
   'Lulus Contoh', 'Jalan di Soal Ini', 'Detik di Soal Ini', 'Pindah Tab',
-  'Sisa Detik', 'Status', 'Tambahan Menit', 'Diperbarui', 'Diblokir Sampai', 'Buka Blokir'
+  'Sisa Detik', 'Status', 'Tambahan Menit', 'Diperbarui', 'Diblokir Sampai', 'Buka Blokir',
+  'Keluar Layar Penuh'
 ];
 var KOL_TAMBAHAN = 14;    // kolom N, 1-based — ditulis guru
 var KOL_DIBLOKIR = 16;    // kolom P — ditulis denyut murid
 var KOL_BUKA_BLOKIR = 17; // kolom Q — ditulis guru, dibaca denyut murid
+var KOL_LAYAR_PENUH = 18; // kolom R — ditulis denyut murid
+
+/**
+ * Satu baris per kejadian mencurigakan selama ujian: keluar layar penuh, lama
+ * di luar layar penuh, pindah tab, diblokir, dan percobaan salin-tempel.
+ * "Waktu Kejadian" menurut perangkat murid; "Diterima" menurut server.
+ */
+var KOLOM_KECURANGAN = [
+  'Waktu Kejadian', 'Diterima', 'Kode Sesi', 'Kelas', 'NIS', 'Nama', 'Jenis', 'Ke-', 'Keterangan', 'Perangkat'
+];
 
 // ─────────────────────────────── Router ───────────────────────────────
 
@@ -160,6 +171,7 @@ function doPost(e) {
       case 'tambahWaktu': return json(aksiTambahWaktu(badan));
       case 'bukaBlokir':  return json(aksiBukaBlokir(badan));
       case 'kodeKeluar':  return json(aksiKodeKeluar(badan));
+      case 'kecurangan':  return json(aksiKecurangan(badan));
       case 'keluarDarurat': return json(aksiKeluarDarurat(badan));
       default:          return json({ ok: false, pesan: 'Aksi tidak dikenal: ' + aksi });
     }
@@ -359,6 +371,7 @@ function aksiDenyut(b) {
         sheet.getRange(r + 1, 1, 1, baris.length).setValues([baris]);
         sheet.getRange(r + 1, KOL_TAMBAHAN + 1).setValue(new Date());
         sheet.getRange(r + 1, KOL_DIBLOKIR).setValue(diblokir);
+        sheet.getRange(r + 1, KOL_LAYAR_PENUH).setValue(Number(b.keluarLayarPenuh) || 0);
         return {
           ok: true,
           tambahanMenit: Number(data[r][KOL_TAMBAHAN - 1]) || 0,
@@ -366,7 +379,7 @@ function aksiDenyut(b) {
         };
       }
     }
-    sheet.appendRow(baris.concat([0, new Date(), diblokir, 0]));
+    sheet.appendRow(baris.concat([0, new Date(), diblokir, 0, Number(b.keluarLayarPenuh) || 0]));
     return { ok: true, tambahanMenit: 0, bukaBlokirKe: 0 };
   } finally {
     kunci.releaseLock();
@@ -471,6 +484,40 @@ function aksiKodeKeluar(b) {
 }
 
 /**
+ * POST ?action=kecurangan
+ * Dipanggil browser murid (tanpa PIN) untuk mencatat kejadian mencurigakan.
+ * Beberapa kejadian dikirim sekaligus dan ditulis dalam satu setValues, supaya
+ * 36 murid yang berkali-kali keluar layar penuh tidak saling menunggu lama.
+ * Gagal mengambil kunci = jawaban gagal; browser menyimpan antreannya dan
+ * mengirim ulang, jadi tidak ada catatan yang hilang.
+ */
+function aksiKecurangan(b) {
+  var sesi = cariSesi(b.sesi);
+  if (!sesi) return { ok: false, pesan: 'Sesi tidak ditemukan' };
+  var kejadian = (b.kejadian || []).slice(0, 50);
+  if (kejadian.length === 0) return { ok: true, dicatat: 0 };
+
+  var kunci = LockService.getScriptLock();
+  if (!kunci.tryLock(8000)) return { ok: false, pesan: 'Server sibuk, dicoba lagi' };
+  try {
+    var sheet = sheetKecurangan();
+    var diterima = new Date();
+    var baris = kejadian.map(function (k) {
+      return [
+        new Date(Number(k.ts) || diterima.getTime()), diterima,
+        String(b.sesi), String(b.kelas || ''), String(b.nis || ''), String(b.nama || '').slice(0, 80),
+        String(k.jenis || '').slice(0, 40), Number(k.ke) || '', String(k.keterangan || '').slice(0, 200),
+        String(b.perangkat || '').slice(0, 100)
+      ];
+    });
+    sheet.getRange(sheet.getLastRow() + 1, 1, baris.length, KOLOM_KECURANGAN.length).setValues(baris);
+    return { ok: true, dicatat: baris.length };
+  } finally {
+    kunci.releaseLock();
+  }
+}
+
+/**
  * POST ?action=keluarDarurat
  * Jalur cadangan aplikasi Android saat jaringan mati: murid menahan tombol
  * keluar 10 detik, alarm berbunyi, dan kejadiannya dikirim ke sini begitu
@@ -537,7 +584,8 @@ function aksiPantau(p) {
       status: data[r][12],
       tambahanMenit: Number(data[r][13]) || 0,
       diperbaruiPada: data[r][14] ? new Date(data[r][14]).getTime() : null,
-      diblokirSampai: data[r][KOL_DIBLOKIR - 1] ? new Date(data[r][KOL_DIBLOKIR - 1]).getTime() : null
+      diblokirSampai: data[r][KOL_DIBLOKIR - 1] ? new Date(data[r][KOL_DIBLOKIR - 1]).getTime() : null,
+      keluarLayarPenuh: Number(data[r][KOL_LAYAR_PENUH - 1]) || 0
     });
   }
   baris.sort(function (a, b) { return a.nama < b.nama ? -1 : 1; });
@@ -848,6 +896,7 @@ function sheetProgres() {
   return s;
 }
 function sheetLog()  { return ambilAtauBuat('_Log', KOLOM_LOG); }
+function sheetKecurangan() { return ambilAtauBuat('_Kecurangan', KOLOM_KECURANGAN); }
 
 function catatLog(jenis, keterangan) {
   try {

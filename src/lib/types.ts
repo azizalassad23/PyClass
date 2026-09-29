@@ -150,6 +150,27 @@ export interface Denyut {
   status: 'mengerjakan' | 'mengirim' | 'diblokir';
   /** Epoch ms blokir anti-cheat berakhir; null bila tidak diblokir. */
   diblokirSampai: number | null;
+  /** Berapa kali murid keluar dari layar penuh. */
+  keluarLayarPenuh: number;
+}
+
+/** Satu kejadian mencurigakan selama ujian; dicatat di sheet `_Kecurangan`. */
+export interface KejadianKecurangan {
+  /** Epoch ms menurut perangkat murid. */
+  ts: number;
+  jenis: string;
+  /** Hitungan ke berapa untuk jenis ini; 0 bila tidak relevan. */
+  ke: number;
+  keterangan: string;
+}
+
+export interface KirimanKecurangan {
+  sesi: string;
+  kelas: string;
+  nis: string;
+  nama: string;
+  perangkat: string;
+  kejadian: KejadianKecurangan[];
 }
 
 export interface BarisPantau {
@@ -168,5 +189,6 @@ export interface BarisPantau {
   status: string;
   tambahanMenit: number;
   diblokirSampai: number | null;
+  keluarLayarPenuh: number;
   diperbaruiPada: number | null;
 }

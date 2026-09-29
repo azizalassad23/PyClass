@@ -6,6 +6,9 @@ import { PanelEditor } from '../components/PanelEditor';
 import { kirimDenganUlangan, kirimDenyut } from '../lib/api';
 import { mmss, normalisasiKeluaran, sejakDetik } from '../lib/format';
 import { durasiBlokirMenit, useAntiCheat, useJejakSoal } from '../lib/useAntiCheat';
+import { catatKejadian, kirimAntrean } from '../lib/catatanKecurangan';
+import { useLayarPenuh } from '../lib/useLayarPenuh';
+import { baca, tulis } from '../lib/storage';
 import { menitTerpakai, useTimer } from '../lib/useTimer';
 import {
   muatHasil, muatUjianAktif, simpanHasil, simpanJawaban, type KeadaanUjian,
@@ -77,7 +80,26 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
     aktif: !mengirim,
     durasiBlokirMenit: durasiBlokir,
     onBlokirSelesai: resetProgres,
+    onKejadian: (jenis, keterangan, ke) => catatKejadian(identitas, jenis, keterangan, ke),
   });
+
+  // Layar penuh wajib. Keluar = sirene + tercatat; soal ditutup tirai sampai kembali.
+  const layar = useLayarPenuh({
+    kunci: kunciSesi,
+    aktif: !mengirim,
+    onKeluar: (ke) => catatKejadian(identitas, 'keluar-layar-penuh', 'keluar dari layar penuh, alarm berbunyi', ke),
+    onKembali: (detik) => catatKejadian(identitas, 'kembali-layar-penuh', `kembali setelah ${detik} detik di luar layar penuh`),
+  });
+
+  // Perangkat yang tidak mengizinkan layar penuh (iPhone) tetap boleh
+  // mengerjakan, tetapi guru perlu tahu siapa saja — dicatat sekali per sesi.
+  useEffect(() => {
+    if (layar.didukung) return;
+    const k = `layarpenuh-tidak-didukung:${kunciSesi}`;
+    if (baca<boolean>(k, false)) return;
+    tulis(k, true);
+    catatKejadian(identitas, 'tanpa-layar-penuh', 'peramban ini tidak mendukung layar penuh (kemungkinan iPhone)');
+  }, [layar.didukung, kunciSesi, identitas]);
   const diblokir = diblokirSampai !== null;
   const { jejak, masukSoal, catatJalan } = useJejakSoal(kunciSesi);
   // Tambahan waktu dari guru datang lewat balasan denyut (F-G06).
@@ -94,6 +116,8 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
   const hasilTestRef = useRef(hasilTest);
   const jejakRef = useRef(jejak);
   const pindahTabRef = useRef(pindahTab);
+  const keluarLayarRef = useRef(layar.jumlahKeluar);
+  keluarLayarRef.current = layar.jumlahKeluar;
   const sisaDetikRef = useRef(sisaDetik);
   const diblokirSampaiRef = useRef(diblokirSampai);
   const terimaBukaBlokirRef = useRef(terimaBukaBlokir);
@@ -161,7 +185,10 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
           sisaDetik: sisaDetikRef.current,
           status: sampai !== null ? 'diblokir' : 'mengerjakan',
           diblokirSampai: sampai,
+          keluarLayarPenuh: keluarLayarRef.current,
         });
+        // Catatan kecurangan yang tertahan (misalnya saat sinyal putus) ikut dikirim ulang.
+        void kirimAntrean(identitas);
         if (batal) return;
         if (hasil.tambahanMenit > 0) setTambahanMenit(hasil.tambahanMenit);
         terimaBukaBlokirRef.current(hasil.bukaBlokirKe);
@@ -258,6 +285,7 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
       if (hasil) {
         simpanHasil(identitas.sesi, identitas.nis, hasil);
         hapusTimer();
+        layar.lepas();
         navigate('/ujian/hasil');
         return;
       }
@@ -266,9 +294,10 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
       setGalatKirim(galat ?? 'Pengiriman gagal.');
       sessionStorage.setItem('pyclass:bukti', JSON.stringify(payload));
       hapusTimer();
+      layar.lepas();
       navigate('/ujian/hasil');
     },
-    [identitas, jawaban, paket, jalankanTest, mulaiPada, tambahanMenit, pindahTab, hapusTimer, navigate],
+    [identitas, jawaban, paket, jalankanTest, mulaiPada, tambahanMenit, pindahTab, hapusTimer, navigate, layar],
   );
   kirimRef.current = (status) => void kirim(status);
 
@@ -308,19 +337,28 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
     );
   }
 
+  // Soal hanya terlihat dalam layar penuh. Di iPhone (tidak didukung) tirai tidak dipasang.
+  const tirai = layar.didukung && !layar.penuh ? (
+    <TiraiLayarPenuh jumlahKeluar={layar.jumlahKeluar} sisaUjianDetik={sisaDetik} onMasuk={layar.masuk} />
+  ) : null;
+
   if (diblokir) {
     return (
-      <LayarBlokir
-        judul={paket.judul}
-        sisaBlokirDetik={sisaBlokirDetik}
-        durasiBlokir={durasiBlokir}
-        sisaUjianDetik={sisaDetik}
-      />
+      <>
+        <LayarBlokir
+          judul={paket.judul}
+          sisaBlokirDetik={sisaBlokirDetik}
+          durasiBlokir={durasiBlokir}
+          sisaUjianDetik={sisaDetik}
+        />
+        {tirai}
+      </>
     );
   }
 
   return (
     <div data-ujian style={{ background: 'var(--cream)', minHeight: '100vh' }}>
+      {tirai}
       <header
         style={{
           display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
@@ -570,6 +608,58 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
  * Pengganti layar ujian selama diblokir. Editor sama sekali tidak dirender,
  * jadi tidak ada yang bisa dikerjakan sampai blokir berakhir.
  */
+/**
+ * Menutup soal selama murid tidak dalam layar penuh. Tombolnya adalah klik yang
+ * dibutuhkan peramban untuk masuk layar penuh lagi — dan sekaligus mengizinkan
+ * sirene berbunyi setelah halaman dimuat ulang.
+ */
+function TiraiLayarPenuh({ jumlahKeluar, sisaUjianDetik, onMasuk }: {
+  jumlahKeluar: number;
+  sisaUjianDetik: number;
+  onMasuk: () => void;
+}) {
+  const pernahKeluar = jumlahKeluar > 0;
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="judul-tirai"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000, background: pernahKeluar ? 'var(--ink)' : 'var(--cream)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center',
+      }}
+    >
+      <div style={{ maxWidth: 520 }}>
+        {pernahKeluar && (
+          <span className="pill pill--brand" style={{ marginBottom: 16, fontSize: 12.5, padding: '7px 14px' }}>
+            Alarm berbunyi · tercatat di sheet guru
+          </span>
+        )}
+        <h1
+          id="judul-tirai"
+          style={{
+            fontSize: 'clamp(26px, 4vw, 34px)', lineHeight: 1.15, margin: '0 0 12px',
+            color: pernahKeluar ? 'var(--cream)' : 'var(--ink)',
+          }}
+        >
+          {pernahKeluar ? 'Kamu keluar dari layar penuh' : 'Ujian dikerjakan dalam layar penuh'}
+        </h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.65, margin: '0 0 22px', color: pernahKeluar ? '#e8ddd0' : 'var(--muted)' }}>
+          {pernahKeluar
+            ? `Soal disembunyikan sampai kamu kembali. Sudah ${jumlahKeluar} kali keluar — setiap kejadian beserta lamanya dicatat.`
+            : 'Soal ditampilkan setelah layar penuh aktif. Keluar dari layar penuh akan membunyikan alarm dan tercatat di sheet guru.'}
+        </p>
+        <button type="button" className="btn btn--primary" style={{ fontSize: 17, padding: '15px 30px' }} onClick={onMasuk}>
+          {pernahKeluar ? 'Kembali ke layar penuh' : 'Masuk layar penuh'}
+        </button>
+        <p style={{ fontSize: 13, margin: '18px 0 0', color: pernahKeluar ? '#b5aa9c' : 'var(--muted-2)' }}>
+          Timer tetap berjalan: sisa <b style={{ fontFamily: 'var(--mono)' }}>{mmss(sisaUjianDetik)}</b>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function LayarBlokir({ judul, sisaBlokirDetik, durasiBlokir, sisaUjianDetik }: {
   judul: string;
   sisaBlokirDetik: number;

@@ -44,15 +44,17 @@ interface KeluarTerakhir {
   blokirSebelum: number | null;
 }
 
-function pulihkanBilaMuatUlang(kPindah: string, kBlokir: string, kKeluar: string): void {
+/** Mengembalikan hitungan yang dibatalkan karena ternyata muat ulang, atau null. */
+function pulihkanBilaMuatUlang(kPindah: string, kBlokir: string, kKeluar: string): number | null {
   const keluar = baca<KeluarTerakhir | null>(kKeluar, null);
-  if (!keluar) return;
+  if (!keluar) return null;
   hapus(kKeluar);
   const navigasi = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-  if (navigasi?.type !== 'reload' || Date.now() - keluar.ts > JEDA_MUAT_ULANG_MS) return;
+  if (navigasi?.type !== 'reload' || Date.now() - keluar.ts > JEDA_MUAT_ULANG_MS) return null;
   tulis(kPindah, keluar.pindahSebelum);
   if (keluar.blokirSebelum === null) hapus(kBlokir);
   else tulis(kBlokir, keluar.blokirSebelum);
+  return keluar.pindahSebelum + 1;
 }
 
 export interface AntiCheat {
@@ -74,9 +76,16 @@ interface OpsiAntiCheat {
   durasiBlokirMenit: number;
   /** Dipanggil saat blokir berakhir, baik karena habis waktunya maupun dibuka guru. */
   onBlokirSelesai: () => void;
+  /** Setiap kejadian yang perlu dicatat di sheet _Kecurangan. */
+  onKejadian?: (jenis: string, keterangan: string, ke?: number) => void;
 }
 
-export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai }: OpsiAntiCheat): AntiCheat {
+/** Percobaan salin-tempel yang sama dicatat paling sering sekali per jeda ini. */
+const JEDA_CATAT_SALIN_MS = 15_000;
+
+export function useAntiCheat({
+  kunci, aktif, durasiBlokirMenit, onBlokirSelesai, onKejadian,
+}: OpsiAntiCheat): AntiCheat {
   const kPindah = `pindahtab:${kunci}`;
   const kBlokir = `blokir:${kunci}`;
   const kKeluar = `keluar:${kunci}`;
@@ -85,8 +94,10 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
   // Pemulihan dijalankan di initializer state pertama agar state berikutnya
   // membaca nilai yang sudah dikoreksi. Aman dijalankan dua kali (StrictMode):
   // panggilan kedua tidak menemukan catatan keluar lagi.
+  const batalMuatUlang = useRef<number | null>(null);
   const [pindahTab, setPindahTab] = useState(() => {
-    pulihkanBilaMuatUlang(kPindah, kBlokir, kKeluar);
+    const batal = pulihkanBilaMuatUlang(kPindah, kBlokir, kKeluar);
+    if (batal !== null) batalMuatUlang.current = batal;
     return baca<number>(kPindah, 0);
   });
   const [diblokirSampai, setDiblokirSampai] = useState<number | null>(() => baca<number | null>(kBlokir, null));
@@ -99,6 +110,19 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
   pindahRef.current = pindahTab;
   blokirRef.current = diblokirSampai;
   onSelesaiRef.current = onBlokirSelesai;
+  const onKejadianRef = useRef(onKejadian);
+  onKejadianRef.current = onKejadian;
+  const lapor = useCallback((jenis: string, keterangan: string, ke = 0) => {
+    onKejadianRef.current?.(jenis, keterangan, ke);
+  }, []);
+
+  // Kejadian "pindah tab" yang ternyata muat ulang sudah telanjur tercatat saat
+  // halaman tersembunyi; catat juga pembatalannya supaya guru tidak salah baca.
+  useEffect(() => {
+    if (batalMuatUlang.current === null) return;
+    lapor('muat-ulang', `pindah tab ke-${batalMuatUlang.current} dibatalkan: halaman hanya dimuat ulang`);
+    batalMuatUlang.current = null;
+  }, [lapor]);
 
   const akhiriBlokir = useCallback(() => {
     // Penjaga ganda: hitung mundur dan pembukaan oleh guru bisa datang bersamaan,
@@ -107,8 +131,9 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
     blokirRef.current = null;
     hapus(kBlokir);
     setDiblokirSampai(null);
+    lapor('blokir-berakhir', 'blokir selesai, seluruh jawaban dikosongkan');
     onSelesaiRef.current();
-  }, [kBlokir]);
+  }, [kBlokir, lapor]);
 
   // Hitung mundur blokir. Juga menangani blokir yang sudah lewat waktunya ketika
   // halaman dibuka kembali setelah ditutup.
@@ -137,6 +162,7 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
     setPindahTab(baru);
 
     if (baru === 1) {
+      lapor('pindah-tab', 'keluar dari halaman ujian (peringatan)', baru);
       setPeringatan(
         `Kamu keluar dari halaman ujian. Ini peringatan terakhir: sekali lagi keluar, pengerjaanmu diblokir ${durasiBlokirMenit} menit dan seluruh jawabanmu dikosongkan.`,
       );
@@ -146,12 +172,17 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
     // Kedua kali dan seterusnya — termasuk keluar lagi saat sedang diblokir, yang
     // memulai ulang hitungan dari awal.
     const sampai = Date.now() + durasiBlokirMenit * 60_000;
+    lapor(
+      'diblokir',
+      `keluar dari halaman ujian ke-${baru}, diblokir ${durasiBlokirMenit} menit`,
+      baru,
+    );
     blokirRef.current = sampai;
     tulis(kBlokir, sampai);
     setDiblokirSampai(sampai);
     setSekarang(Date.now());
     setPeringatan(null);
-  }, [kPindah, kBlokir, kKeluar, durasiBlokirMenit]);
+  }, [kPindah, kBlokir, kKeluar, durasiBlokirMenit, lapor]);
 
   useEffect(() => {
     if (!aktif) return;
@@ -170,9 +201,19 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
     // F-A01 — dipasang di fase CAPTURE pada window supaya berjalan sebelum handler
     // milik editor kode. CodeMirror mengisi clipboard sendiri saat Ctrl+C di dalam
     // editor, sehingga preventDefault di tingkat dokumen saja tidak menghentikannya.
+    const terakhirDicatat: Record<string, number> = {};
+    const hitungan: Record<string, number> = {};
     const blokir = (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
+      // Klik kanan dan seret tidak dicatat: terlalu sering terjadi tanpa sengaja.
+      if (e.type !== 'copy' && e.type !== 'cut' && e.type !== 'paste') return;
+      hitungan[e.type] = (hitungan[e.type] ?? 0) + 1;
+      const t = Date.now();
+      if (t - (terakhirDicatat[e.type] ?? 0) < JEDA_CATAT_SALIN_MS) return;
+      terakhirDicatat[e.type] = t;
+      const nama = e.type === 'paste' ? 'menempel' : e.type === 'copy' ? 'menyalin' : 'memotong';
+      lapor('salin-tempel', `mencoba ${nama} (ditolak)`, hitungan[e.type]);
     };
     const jenis = ['contextmenu', 'copy', 'cut', 'paste', 'dragstart', 'drop'];
     jenis.forEach((j) => window.addEventListener(j, blokir, true));
@@ -187,7 +228,7 @@ export function useAntiCheat({ kunci, aktif, durasiBlokirMenit, onBlokirSelesai 
       jenis.forEach((j) => window.removeEventListener(j, blokir, true));
       gaya.remove();
     };
-  }, [aktif]);
+  }, [aktif, lapor]);
 
   const terimaBukaBlokir = useCallback(
     (ke: number) => {

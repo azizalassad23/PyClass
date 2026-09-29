@@ -5,6 +5,7 @@ import { ambilPaket, cekSesi, daftarSesiDemo, MODE_DEMO } from '../lib/api';
 import { KELAS_LIST, type Kelas } from '../lib/types';
 import { simpanUjian } from '../lib/sesiUjian';
 import { sisaMenujuBuka, TERM_QUIZ, termQuizTerbuka } from '../lib/termQuiz';
+import { layarPenuhDidukung, masukLayarPenuh } from '../lib/useLayarPenuh';
 import { usePython } from '../python/PythonProvider';
 
 /**
@@ -72,6 +73,9 @@ export function UjianMasuk({ khusus = false }: { khusus?: boolean }) {
     e.preventDefault();
     setGalatUmum('');
     if (!periksa()) return;
+    // Harus sebelum `await` pertama: peramban hanya mengizinkan layar penuh di
+    // dalam klik. Layar ujian menahan soal sampai layar penuh aktif.
+    if (layarPenuhDidukung()) masukLayarPenuh();
     setMemuat(true);
     try {
       const sesi = await cekSesi(kodeSesi);
@@ -264,7 +268,8 @@ export function UjianMasuk({ khusus = false }: { khusus?: boolean }) {
             {memuat ? 'Memuat soal…' : terkunci ? 'Belum dibuka' : khusus ? 'Mulai TERM QUIZ' : 'Masuk Ujian'}
           </button>
           <p style={{ fontSize: 12, color: 'var(--muted-2)', margin: '14px 0 0', textAlign: 'center' }}>
-            Menekan tombol ini memulai timer. Menyalin-tempel kode dinonaktifkan selama ujian.
+            Menekan tombol ini memulai timer dan membuka layar penuh. Keluar dari layar penuh membunyikan alarm
+            dan tercatat di sheet guru.
           </p>
 
           {MODE_DEMO && !khusus && (

@@ -7,8 +7,8 @@
  */
 import * as demo from './mockBackend';
 import type {
-  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, PaketUjian,
-  SesiInfo, SubmitPayload,
+  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, KirimanKecurangan,
+  PaketUjian, SesiInfo, SubmitPayload,
 } from './types';
 
 const BASE = (import.meta.env.VITE_API_URL ?? '').trim();
@@ -64,6 +64,12 @@ export async function kirimDenyut(d: Denyut): Promise<{ tambahanMenit: number; b
 }
 
 /** Guru mengakhiri blokir seorang murid lebih awal; progres murid tetap direset. */
+/** Kejadian mencurigakan ke sheet _Kecurangan. Gagal = dilempar, antrean mencoba lagi. */
+export async function kirimKecurangan(k: KirimanKecurangan): Promise<void> {
+  if (MODE_DEMO) { demo.catatKecurangan(k); return; }
+  await post('kecurangan', k);
+}
+
 export async function bukaBlokir(pin: string, sesi: string, nis: string): Promise<void> {
   if (MODE_DEMO) {
     if (!demo.bukaBlokir(sesi, nis)) throw new ApiError('Murid itu tidak ditemukan di papan pantau.');

@@ -14,8 +14,8 @@ import { hashSeed, kodeKonfirmasi, mulberry32, pilihAcak } from './rng';
 import { baca, daftarKunci, tulis } from './storage';
 import { TERM_QUIZ, termQuizTerbuka } from './termQuiz';
 import type {
-  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, PaketUjian, SesiInfo,
-  Soal, SubmitPayload,
+  BarisPantau, BarisRekap, Denyut, HasilPenilaian, Kelas, KelasSesi, KirimanKecurangan,
+  PaketUjian, SesiInfo, Soal, SubmitPayload,
 } from './types';
 
 const K_SESI = 'demo:sesi';
@@ -302,12 +302,22 @@ export function denyut(d: Denyut): { tambahanMenit: number; bukaBlokirKe: number
     sisaDetik: d.sisaDetik,
     status: d.status,
     diblokirSampai: d.diblokirSampai,
+    keluarLayarPenuh: d.keluarLayarPenuh ?? 0,
     // Tambahan menit dan buka blokir milik guru — denyut tidak boleh menimpanya.
     tambahanMenit,
     bukaBlokirKe,
     diperbaruiPada: Date.now(),
   } satisfies BarisPantauTersimpan);
   return { tambahanMenit, bukaBlokirKe };
+}
+
+/** Meniru sheet _Kecurangan: satu baris per kejadian. */
+export function catatKecurangan(k: KirimanKecurangan): void {
+  const daftar = baca<unknown[]>('demo:kecurangan', []);
+  for (const kej of k.kejadian) {
+    daftar.push({ ...kej, diterima: Date.now(), sesi: k.sesi, kelas: k.kelas, nis: k.nis, nama: k.nama, perangkat: k.perangkat });
+  }
+  tulis('demo:kecurangan', daftar);
 }
 
 /** Guru mengakhiri blokir seorang murid lebih awal. */

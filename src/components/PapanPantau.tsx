@@ -285,6 +285,14 @@ export function PapanPantau(
                     </td>
                     <td style={{ fontWeight: b.pindahTab > 1 ? 700 : 400, color: b.pindahTab > 1 ? 'var(--brand-deep)' : 'var(--muted-2)' }}>
                       {b.pindahTab}
+                      {(b.keluarLayarPenuh ?? 0) > 0 && (
+                        <span
+                          title="Keluar dari layar penuh; rincian waktunya ada di sheet _Kecurangan"
+                          style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--brand-deep)' }}
+                        >
+                          layar penuh {b.keluarLayarPenuh}×
+                        </span>
+                      )}
                     </td>
                     <td>
                       {b.status === 'mengirim' ? (
