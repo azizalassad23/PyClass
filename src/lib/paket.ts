@@ -59,6 +59,15 @@ export const PAKET: DefinisiPaket[] = [
     posisi: Array.from({ length: 15 }, (_, i) => `tq2-p${i + 1}`),
   },
   {
+    paket: 'remedial-tq',
+    judul: 'Remedial TQ',
+    subjudul: 'Unit 1–3 · 8 soal berbahasa Inggris (4 mudah, 3 sedang, 1 sulit)',
+    jenis: 'termquiz',
+    durasiMenit: 40,
+    // Soal remedial berjenis 'remedial' di bank, jadi tidak ikut komposisi acak TERM QUIZ.
+    posisi: Array.from({ length: 8 }, (_, i) => `rm-p${i + 1}`),
+  },
+  {
     paket: TERM_QUIZ.paket,
     judul: TERM_QUIZ.judul,
     subjudul: '15 soal acak dari seluruh soal term quiz · 7 mudah, 5 sedang, 3 sulit',

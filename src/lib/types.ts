@@ -131,7 +131,8 @@ export interface SoalBank extends Soal {
   /** Soal dalam grup yang sama saling menggantikan saat pengacakan (F-U04). */
   grup: string;
   tingkat: 'mudah' | 'sedang' | 'sulit';
-  jenis: JenisPenilaian | 'keduanya';
+  /** `remedial` = soal Remedial TQ; sengaja di luar kumpulan acak TERM QUIZ. */
+  jenis: JenisPenilaian | 'keduanya' | 'remedial';
   /** Tidak pernah dikirim ke browser pada arsitektur sungguhan. */
   outputKunci: string[];
   /** Solusi guru — dipakai "Periksa Bank Soal" untuk memvalidasi kunci. */

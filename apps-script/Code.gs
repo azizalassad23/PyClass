@@ -819,7 +819,10 @@ function posisiPaket(paket) {
     'uts-ganjil': ['u1-p1', 'u1-p4', 'u2-p1', 'u2-p2', 'u1-p2', 'u2-p5', 'u3-p1', 'u3-p5', 'u3-p2', 'u3-p3'],
     'uas-genap':  ['u1-p3', 'u2-p3', 'u3-p2', 'u4-p2', 'u4-p5', 'u5-p1', 'u6-p1', 'u6-p3', 'u7-p2', 'u7-p4'],
     'pra-term':   POSISI_PRA_TERM,
-    'term-1':     POSISI_TERM_1
+    'term-1':     POSISI_TERM_1,
+    // Remedial TQ: 8 soal tetap (4 mudah, 3 sedang, 1 sulit). Soalnya berjenis
+    // "remedial" di _Bank sehingga tidak ikut terambil komposisi acak TERM QUIZ.
+    'remedial-tq': ['rm-p1', 'rm-p2', 'rm-p3', 'rm-p4', 'rm-p5', 'rm-p6', 'rm-p7', 'rm-p8']
   };
   if (peta[paket]) return peta[paket];
   var cocok = /^kuis-(u\d)$/.exec(paket);
@@ -835,6 +838,7 @@ function judulPaket(paket) {
   if (paket === 'uas-genap') return 'Ujian Akhir Semester';
   if (paket === 'pra-term') return 'Pra-Term Quiz';
   if (paket === 'term-1') return 'Term Quiz 1';
+  if (paket === 'remedial-tq') return 'Remedial TQ';
   if (paket === TERM_KHUSUS.paket) return TERM_KHUSUS.judul;
   var cocok = /^kuis-u(\d)$/.exec(paket);
   return cocok ? 'Kuis Unit ' + cocok[1] : paket;
@@ -843,7 +847,8 @@ function judulPaket(paket) {
 /** Jenis penilaian menentukan sheet nilai tujuan. */
 function jenisPaket(paket) {
   // Semua term quiz masuk ke sheet "<Kelas> — Term Quiz"; kolom Paket membedakannya.
-  if (paket === 'pra-term' || /^term-/.test(paket)) return 'termquiz';
+  // Remedial TQ ikut sheet "<Kelas> — Term Quiz"; kolom Paket membedakannya.
+  if (paket === 'pra-term' || paket === 'remedial-tq' || /^term-/.test(paket)) return 'termquiz';
   if (/^kuis-/.test(paket)) return 'kuis';
   return 'ujian';
 }
