@@ -18,6 +18,7 @@ const PYODIDE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`
 
 
 type PyodideAPI = {
+  runPython: (kode: string) => unknown;
   runPythonAsync: (kode: string, opsi?: { globals?: unknown }) => Promise<unknown>;
   setStdout: (o: { write: (b: Uint8Array) => number }) => void;
   setStderr: (o: { write: (b: Uint8Array) => number }) => void;
@@ -117,6 +118,15 @@ async function jalankan(id: number, kode: string, stdin: string[]): Promise<void
       galat.push(pesan);
     }
   } finally {
+    // Python menahan keluaran yang belum diakhiri baris baru, misalnya dari
+    // print(x, end=" ") di akhir program. Tanpa flush, keluaran itu hilang dari
+    // hasil program INI dan malah muncul di awal program BERIKUTNYA — saat ujian
+    // jawaban benar dinilai salah dan uji berikutnya ikut tercemar.
+    try {
+      pyodide.runPython('import sys\nsys.stdout.flush()\nsys.stderr.flush()');
+    } catch {
+      /* flush tidak boleh menggagalkan hasil */
+    }
     ns.destroy();
   }
 

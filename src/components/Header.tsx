@@ -122,6 +122,7 @@ export function NavBeranda() {
   return (
     <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <Link to="/materi" style={tautanNav}>Materi</Link>
+      <Link to="/tantangan" style={tautanNav}>Tantangan</Link>
       <Link to="/ujian" style={tautanNav}>Ujian</Link>
     </nav>
   );
