@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
 import {
-  KARTU, UNIT_TANTANGAN, WAKTU_TINGKAT, type JenisKartu, type KartuTantangan, type TingkatKartu,
+  KARTU, UNIT_TANTANGAN, WAKTU_TINGKAT, type JenisKartu, type KartuTantangan,
 } from '../content/tantangan';
 import { UNIT_BY_ID } from '../content/units';
 import { baca, hapus, tulis } from '../lib/storage';
@@ -26,12 +26,6 @@ const LABEL_JENIS: Record<JenisKartu, string> = {
   isian: 'Isian',
 };
 
-const WARNA_TINGKAT: Record<TingkatKartu, { latar: string; teks: string }> = {
-  mudah: { latar: 'var(--leaf-wash)', teks: 'var(--leaf-deep)' },
-  sedang: { latar: 'var(--brand-tint)', teks: 'var(--brand-deep)' },
-  sulit: { latar: 'var(--ink)', teks: 'var(--cream)' },
-};
-
 /**
  * Jawaban teks dibandingkan setelah dirapikan: spasi berlebih, tanda kutip
  * ganda/tunggal, dan spasi di sekitar koma atau kurung tidak dipersoalkan —
@@ -42,6 +36,16 @@ export function rapikanJawaban(s: string): string {
   t = t.replace(/\s*([,:])\s*/g, '$1 ').replace(/([[({])\s+/g, '$1').replace(/\s+([\])}])/g, '$1').trim();
   if (t.length >= 2 && t.startsWith("'") && t.endsWith("'") && !t.slice(1, -1).includes("'")) t = t.slice(1, -1);
   return t;
+}
+
+/** Fisher–Yates: setiap urutan sama mungkinnya. */
+function acak<T>(daftar: T[]): T[] {
+  const hasil = daftar.slice();
+  for (let i = hasil.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [hasil[i], hasil[j]] = [hasil[j], hasil[i]];
+  }
+  return hasil;
 }
 
 function tanyaKartu(k: KartuTantangan): string {
@@ -58,12 +62,6 @@ function petunjukJawab(k: KartuTantangan): string {
   return 'Ketik jawabanmu';
 }
 
-function pembahasan(k: KartuTantangan): string {
-  if (k.jenis === 'lengkapi') return `Isian yang benar: ${k.terima[0]}  →  keluaran ${k.target}`;
-  if (k.jenis === 'cari-salah') return `Baris ${k.terima[0]} — ${k.galat}`;
-  return `Jawaban: ${k.terima[0]}`;
-}
-
 // ── Menu pilih unit ────────────────────────────────────────────────────────
 
 export function TantanganMenu() {
@@ -74,14 +72,15 @@ export function TantanganMenu() {
         <span className="pill pill--brand" style={{ marginBottom: 14 }}>Kuis langsung di kelas</span>
         <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', margin: '0 0 10px' }}>Tantangan Kilat</h1>
         <p style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--muted)', maxWidth: 640, margin: '0 0 30px' }}>
-          Pilih unit, lalu buka kartu satu per satu. Setiap unit berisi 15 kartu: 10 mudah (60 detik), 3 sedang
-          (90 detik), dan 2 sulit (2 menit). Jawaban hanya bisa dikirim sekali per kartu.
+          Pilih unit, lalu buka kartu satu per satu. Setiap unit berisi 20 kartu dalam urutan acak, dengan waktu 60
+          detik sampai 2 menit tergantung tingkat kesulitannya. Jawaban hanya bisa dikirim sekali per kartu.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
           {UNIT_TANTANGAN.map((id) => {
             const unit = UNIT_BY_ID.get(id);
             const hasil = baca<Record<string, HasilKartu>>(`tantangan:${id}`, {});
             const selesai = Object.keys(hasil).length;
+            const jumlah = KARTU.filter((k) => k.unit === id).length;
             return (
               <Link
                 key={id}
@@ -98,7 +97,7 @@ export function TantanganMenu() {
                   >
                     {id}
                   </span>
-                  <span className="pill pill--quiet">{selesai > 0 ? `${selesai}/15 terbuka` : '15 kartu'}</span>
+                  <span className="pill pill--quiet">{selesai > 0 ? `${selesai}/${jumlah} terbuka` : `${jumlah} kartu`}</span>
                 </div>
                 <h2 style={{ fontSize: 20, margin: '0 0 6px' }}>{unit?.judul}</h2>
                 <p style={{ fontSize: 13, color: 'var(--muted-2)', margin: 0 }}>{unit?.ringkas}</p>
@@ -118,7 +117,11 @@ export function TantanganUnit() {
   const { unit: param } = useParams();
   const unitId = (param ?? '').toUpperCase();
   const unit = UNIT_BY_ID.get(unitId);
-  const kartu = useMemo(() => KARTU.filter((k) => k.unit === unitId), [unitId]);
+  const semua = useMemo(() => KARTU.filter((k) => k.unit === unitId), [unitId]);
+  // Urutan diacak setiap kali unit dibuka dan setiap ganti murid, supaya
+  // murid yang menunggu giliran tidak bisa menghafal "kartu nomor 3".
+  const [kartu, setKartu] = useState(() => acak(semua));
+  useEffect(() => { setKartu(acak(semua)); }, [semua]);
   const kunci = `tantangan:${unitId}`;
   const [hasil, setHasil] = useState<Record<string, HasilKartu>>(() => baca(kunci, {}));
   const [terbuka, setTerbuka] = useState<KartuTantangan | null>(null);
@@ -126,7 +129,7 @@ export function TantanganUnit() {
 
   useEffect(() => { panaskan(); }, [panaskan]);
 
-  if (!unit || kartu.length === 0) return <Navigate to="/tantangan" replace />;
+  if (!unit || semua.length === 0) return <Navigate to="/tantangan" replace />;
 
   const simpan = (id: string, h: HasilKartu) => {
     const baru = { ...hasil, [id]: h };
@@ -138,6 +141,7 @@ export function TantanganUnit() {
     if (!window.confirm('Kosongkan semua kartu untuk murid berikutnya?')) return;
     hapus(kunci);
     setHasil({});
+    setKartu(acak(semua));
   };
 
   const hitung = (s: Status) => Object.values(hasil).filter((h) => h.status === s).length;
@@ -211,7 +215,6 @@ function MukaKartu({ nomor, kartu, hasil, bisaDibuka, onBuka }: {
   bisaDibuka: boolean;
   onBuka: () => void;
 }) {
-  const warna = WARNA_TINGKAT[kartu.tingkat];
   const latar = hasil?.status === 'benar' ? 'var(--leaf-wash)' : hasil ? 'var(--brand-wash)' : 'var(--surface)';
   const garis = hasil?.status === 'benar' ? 'var(--leaf)' : hasil ? 'var(--brand-line)' : 'var(--line)';
   const label = hasil?.status === 'benar' ? '✓ Benar' : hasil?.status === 'salah' ? '✗ Salah' : hasil ? '⏱ Waktu habis' : null;
@@ -220,7 +223,7 @@ function MukaKartu({ nomor, kartu, hasil, bisaDibuka, onBuka }: {
       type="button"
       onClick={onBuka}
       disabled={Boolean(hasil) || !bisaDibuka}
-      aria-label={`Kartu ${nomor}, ${kartu.tingkat}, ${LABEL_JENIS[kartu.jenis]}${label ? `, ${label}` : ''}`}
+      aria-label={`Kartu ${nomor}, ${LABEL_JENIS[kartu.jenis]}${label ? `, ${label}` : ''}`}
       style={{
         textAlign: 'left', cursor: hasil || !bisaDibuka ? 'default' : 'pointer', font: 'inherit', color: 'inherit',
         background: latar, border: `2px solid ${garis}`, borderRadius: 'var(--r-lg)', padding: '16px 16px 14px',
@@ -230,19 +233,10 @@ function MukaKartu({ nomor, kartu, hasil, bisaDibuka, onBuka }: {
       onMouseEnter={(e) => { if (!hasil && bisaDibuka) e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: 'var(--display)', fontSize: 34, lineHeight: 1 }}>{nomor}</span>
-        <span
-          style={{
-            fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999,
-            background: warna.latar, color: warna.teks, textTransform: 'capitalize',
-          }}
-        >
-          {kartu.tingkat}
-        </span>
-      </div>
+      {/* Tingkat kesulitan dan lama waktunya sengaja tidak ditampilkan:
+          60/90/120 detik pun langsung membocorkan tingkatnya. */}
+      <span style={{ fontFamily: 'var(--display)', fontSize: 34, lineHeight: 1 }}>{nomor}</span>
       <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--body)' }}>{LABEL_JENIS[kartu.jenis]}</span>
-      <span style={{ fontSize: 12.5, color: 'var(--muted-2)' }}>{WAKTU_TINGKAT[kartu.tingkat]} detik</span>
       {label && (
         <span
           style={{
@@ -352,14 +346,6 @@ function KartuTerbuka({ kartu, nomor, onSelesai, onTutup }: {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
           <span style={{ fontFamily: 'var(--display)', fontSize: 26 }}>Kartu {nomor}</span>
-          <span
-            style={{
-              fontSize: 12.5, fontWeight: 700, padding: '5px 12px', borderRadius: 999, textTransform: 'capitalize',
-              background: WARNA_TINGKAT[kartu.tingkat].latar, color: WARNA_TINGKAT[kartu.tingkat].teks,
-            }}
-          >
-            {kartu.tingkat}
-          </span>
           <span className="pill pill--quiet">{LABEL_JENIS[kartu.jenis]}</span>
           <span style={{ flex: 1 }} />
           <span
@@ -437,7 +423,7 @@ function KartuTerbuka({ kartu, nomor, onSelesai, onTutup }: {
             </button>
           </form>
         ) : (
-          <HasilJawaban kartu={kartu} hasil={hasil} />
+          <HasilJawaban hasil={hasil} />
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
@@ -459,7 +445,12 @@ function KartuTerbuka({ kartu, nomor, onSelesai, onTutup }: {
   );
 }
 
-function HasilJawaban({ kartu, hasil }: { kartu: KartuTantangan; hasil: HasilKartu }) {
+/**
+ * Hasil satu kartu. Jawaban yang benar sengaja TIDAK ditampilkan: murid lain
+ * yang sedang menunggu giliran tidak boleh melihatnya, karena kartu yang sama
+ * akan muncul lagi untuk mereka.
+ */
+function HasilJawaban({ hasil }: { hasil: HasilKartu }) {
   const benar = hasil.status === 'benar';
   const judul = benar ? 'BENAR!' : hasil.status === 'salah' ? 'SALAH' : 'WAKTU HABIS';
   return (
@@ -483,11 +474,6 @@ function HasilJawaban({ kartu, hasil }: { kartu: KartuTantangan; hasil: HasilKar
       {hasil.jawaban && (
         <p style={{ margin: '10px 0 0', fontSize: 15, color: 'var(--muted)' }}>
           Jawabanmu: <b style={{ fontFamily: 'var(--mono)', color: 'var(--ink)' }}>{hasil.jawaban}</b>
-        </p>
-      )}
-      {!benar && (
-        <p style={{ margin: '8px 0 0', fontSize: 17, color: 'var(--ink)' }}>
-          <b style={{ fontFamily: 'var(--mono)' }}>{pembahasan(kartu)}</b>
         </p>
       )}
     </div>
