@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
 import {
-  KARTU, UNIT_TANTANGAN, WAKTU_TINGKAT, type JenisKartu, type KartuTantangan,
+  KARTU, UNIT_TANTANGAN, WAKTU_TINGKAT, type KartuTantangan,
 } from '../content/tantangan';
 import { UNIT_BY_ID } from '../content/units';
 import { baca, hapus, tulis } from '../lib/storage';
@@ -18,13 +18,6 @@ import { useRunnerBatch } from '../python/useRunner';
 
 type Status = 'benar' | 'salah' | 'habis';
 interface HasilKartu { status: Status; jawaban: string }
-
-const LABEL_JENIS: Record<JenisKartu, string> = {
-  keluaran: 'Tebak keluaran',
-  lengkapi: 'Lengkapi kode',
-  'cari-salah': 'Cari kesalahan',
-  isian: 'Isian',
-};
 
 /**
  * Jawaban teks dibandingkan setelah dirapikan: spasi berlebih, tanda kutip
@@ -187,7 +180,6 @@ export function TantanganUnit() {
             <MukaKartu
               key={k.id}
               nomor={i + 1}
-              kartu={k}
               hasil={hasil[k.id]}
               bisaDibuka={pythonSiap}
               onBuka={() => { siapkanSuara(); setTerbuka(k); }}
@@ -208,9 +200,8 @@ export function TantanganUnit() {
   );
 }
 
-function MukaKartu({ nomor, kartu, hasil, bisaDibuka, onBuka }: {
+function MukaKartu({ nomor, hasil, bisaDibuka, onBuka }: {
   nomor: number;
-  kartu: KartuTantangan;
   hasil?: HasilKartu;
   bisaDibuka: boolean;
   onBuka: () => void;
@@ -223,24 +214,23 @@ function MukaKartu({ nomor, kartu, hasil, bisaDibuka, onBuka }: {
       type="button"
       onClick={onBuka}
       disabled={Boolean(hasil) || !bisaDibuka}
-      aria-label={`Kartu ${nomor}, ${LABEL_JENIS[kartu.jenis]}${label ? `, ${label}` : ''}`}
+      aria-label={`Kartu ${nomor}${label ? `, ${label}` : ''}`}
       style={{
-        textAlign: 'left', cursor: hasil || !bisaDibuka ? 'default' : 'pointer', font: 'inherit', color: 'inherit',
+        textAlign: 'center', cursor: hasil || !bisaDibuka ? 'default' : 'pointer', font: 'inherit', color: 'inherit',
         background: latar, border: `2px solid ${garis}`, borderRadius: 'var(--r-lg)', padding: '16px 16px 14px',
-        minHeight: 150, display: 'flex', flexDirection: 'column', gap: 8,
+        minHeight: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
         opacity: !hasil && !bisaDibuka ? 0.6 : 1, transition: 'transform .12s ease, box-shadow .12s ease',
       }}
       onMouseEnter={(e) => { if (!hasil && bisaDibuka) e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
     >
-      {/* Tingkat kesulitan dan lama waktunya sengaja tidak ditampilkan:
-          60/90/120 detik pun langsung membocorkan tingkatnya. */}
-      <span style={{ fontFamily: 'var(--display)', fontSize: 34, lineHeight: 1 }}>{nomor}</span>
-      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--body)' }}>{LABEL_JENIS[kartu.jenis]}</span>
+      {/* Muka kartu hanya nomor. Tingkat kesulitan, lama waktu (60/90/120 detik
+          pun membocorkan tingkat), dan jenis soal sengaja tidak ditampilkan. */}
+      <span style={{ fontFamily: 'var(--display)', fontSize: 48, lineHeight: 1 }}>{nomor}</span>
       {label && (
         <span
           style={{
-            marginTop: 'auto', fontSize: 13.5, fontWeight: 700,
+            fontSize: 13.5, fontWeight: 700,
             color: hasil?.status === 'benar' ? 'var(--leaf-deep)' : 'var(--brand-deep)',
           }}
         >
@@ -346,7 +336,6 @@ function KartuTerbuka({ kartu, nomor, onSelesai, onTutup }: {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
           <span style={{ fontFamily: 'var(--display)', fontSize: 26 }}>Kartu {nomor}</span>
-          <span className="pill pill--quiet">{LABEL_JENIS[kartu.jenis]}</span>
           <span style={{ flex: 1 }} />
           <span
             role="timer"
