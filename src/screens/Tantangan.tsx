@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
+import { GAYA_ANIMASI, Konfeti } from '../components/Konfeti';
 import {
   KARTU, UNIT_TANTANGAN, WAKTU_TINGKAT, type KartuTantangan,
 } from '../content/tantangan';
@@ -55,15 +56,68 @@ function petunjukJawab(k: KartuTantangan): string {
   return 'Ketik jawabanmu';
 }
 
-// ── Menu pilih unit ────────────────────────────────────────────────────────
+// ── Menu utama: dua jenis tantangan ────────────────────────────────────────
+
+const SUB_MENU = [
+  {
+    ke: '/tantangan/pertanyaan',
+    judul: 'Menjawab Pertanyaan',
+    label: 'Kartu berwaktu',
+    isi: 'Buka kartu satu per satu dan jawab sebelum waktunya habis. Setiap unit berisi 20 kartu dalam urutan acak.',
+  },
+  {
+    ke: '/tantangan/live-coding',
+    judul: 'Live Coding',
+    label: 'Tulis program sendiri',
+    isi: 'Baca soal cerita, tulis programnya di editor, lalu periksa sendiri dengan uji contoh dan uji tersembunyi. Setiap unit berisi 10 soal.',
+  },
+];
 
 export function TantanganMenu() {
   return (
     <div style={{ background: 'var(--cream)', minHeight: '100vh' }}>
       <Header kanan={<NavBeranda />} jejak="Tantangan Kilat" />
       <main id="isi" className="shell" style={{ padding: 'clamp(28px, 5vw, 56px) clamp(16px, 3vw, 32px) 64px' }}>
-        <span className="pill pill--brand" style={{ marginBottom: 14 }}>Kuis langsung di kelas</span>
+        <span className="pill pill--brand" style={{ marginBottom: 14 }}>Latihan langsung di kelas</span>
         <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', margin: '0 0 10px' }}>Tantangan Kilat</h1>
+        <p style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--muted)', maxWidth: 640, margin: '0 0 30px' }}>
+          Pilih jenis tantangan. Semuanya dikerjakan di halaman ini saja — tidak ada hasil yang dikirim ke guru.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
+          {SUB_MENU.map((m) => (
+            <Link
+              key={m.ke}
+              to={m.ke}
+              className="card"
+              style={{ textDecoration: 'none', color: 'inherit', display: 'block', padding: '26px 26px 24px' }}
+            >
+              <span className="pill pill--quiet" style={{ marginBottom: 14 }}>{m.label}</span>
+              <h2 style={{ fontSize: 26, margin: '0 0 8px' }}>{m.judul}</h2>
+              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--muted)', margin: '0 0 16px' }}>{m.isi}</p>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-deep)' }}>Pilih unit →</span>
+            </Link>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/** Alamat lama /tantangan/u1 sebelum ada sub menu. */
+export function TantanganLama() {
+  const { unit } = useParams();
+  return <Navigate to={`/tantangan/pertanyaan/${unit ?? ''}`} replace />;
+}
+
+// ── Menjawab Pertanyaan: pilih unit ────────────────────────────────────────
+
+export function TantanganPertanyaan() {
+  return (
+    <div style={{ background: 'var(--cream)', minHeight: '100vh' }}>
+      <Header kanan={<NavBeranda />} jejak="Tantangan Kilat" />
+      <main id="isi" className="shell" style={{ padding: 'clamp(28px, 5vw, 56px) clamp(16px, 3vw, 32px) 64px' }}>
+        <Link to="/tantangan" style={{ fontSize: 13, color: 'var(--muted-2)', textDecoration: 'none' }}>← Tantangan Kilat</Link>
+        <h1 style={{ fontSize: 'clamp(32px, 5vw, 48px)', margin: '10px 0 10px' }}>Menjawab Pertanyaan</h1>
         <p style={{ fontSize: 16, lineHeight: 1.65, color: 'var(--muted)', maxWidth: 640, margin: '0 0 30px' }}>
           Pilih unit, lalu buka kartu satu per satu. Setiap unit berisi 20 kartu dalam urutan acak, dengan waktu 60
           detik sampai 2 menit tergantung tingkat kesulitannya. Jawaban hanya bisa dikirim sekali per kartu.
@@ -77,7 +131,7 @@ export function TantanganMenu() {
             return (
               <Link
                 key={id}
-                to={`/tantangan/${id.toLowerCase()}`}
+                to={`/tantangan/pertanyaan/${id.toLowerCase()}`}
                 className="card"
                 style={{ textDecoration: 'none', color: 'inherit', display: 'block', padding: '22px 22px 20px' }}
               >
@@ -122,7 +176,7 @@ export function TantanganUnit() {
 
   useEffect(() => { panaskan(); }, [panaskan]);
 
-  if (!unit || semua.length === 0) return <Navigate to="/tantangan" replace />;
+  if (!unit || semua.length === 0) return <Navigate to="/tantangan/pertanyaan" replace />;
 
   const simpan = (id: string, h: HasilKartu) => {
     const baru = { ...hasil, [id]: h };
@@ -146,7 +200,7 @@ export function TantanganUnit() {
       <main id="isi" className="shell" style={{ padding: 'clamp(22px, 4vw, 40px) clamp(16px, 3vw, 32px) 64px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
           <div style={{ flex: '1 1 320px' }}>
-            <Link to="/tantangan" style={{ fontSize: 13, color: 'var(--muted-2)', textDecoration: 'none' }}>← Pilih unit</Link>
+            <Link to="/tantangan/pertanyaan" style={{ fontSize: 13, color: 'var(--muted-2)', textDecoration: 'none' }}>← Pilih unit</Link>
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', margin: '6px 0 0' }}>
               {unit.id} · {unit.judul}
             </h1>
@@ -468,45 +522,3 @@ function HasilJawaban({ hasil }: { hasil: HasilKartu }) {
     </div>
   );
 }
-
-/** Hujan kertas warna-warni untuk jawaban benar. */
-function Konfeti() {
-  const potongan = useMemo(
-    () => Array.from({ length: 36 }, (_, i) => ({
-      kiri: Math.random() * 100,
-      tunda: Math.random() * 0.4,
-      lama: 1.4 + Math.random() * 1.2,
-      warna: ['#c67139', '#aebf92', '#f6a06b', '#56633f', '#ffc6a5', '#201e1d'][i % 6],
-      putar: Math.random() * 360,
-    })),
-    [],
-  );
-  return (
-    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: 'var(--r-xl)' }}>
-      {potongan.map((p, i) => (
-        <span
-          key={i}
-          className="tantangan-konfeti"
-          style={{
-            left: `${p.kiri}%`, background: p.warna, animationDelay: `${p.tunda}s`,
-            animationDuration: `${p.lama}s`, transform: `rotate(${p.putar}deg)`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-const GAYA_ANIMASI = `
-.tantangan-konfeti { position: absolute; top: -14px; width: 9px; height: 14px; border-radius: 2px;
-  animation-name: tantangan-jatuh; animation-timing-function: cubic-bezier(.3,.6,.5,1); animation-fill-mode: forwards; }
-@keyframes tantangan-jatuh { to { transform: translateY(620px) rotate(540deg); opacity: 0; } }
-.tantangan-muncul { animation: tantangan-muncul .35s cubic-bezier(.2,1.4,.4,1); }
-@keyframes tantangan-muncul { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.tantangan-denyut { animation: tantangan-denyut 1s ease-in-out infinite; }
-@keyframes tantangan-denyut { 50% { transform: scale(1.12); } }
-@media (prefers-reduced-motion: reduce) {
-  .tantangan-konfeti, .tantangan-muncul, .tantangan-denyut { animation: none !important; }
-  .tantangan-konfeti { display: none; }
-}
-`;
