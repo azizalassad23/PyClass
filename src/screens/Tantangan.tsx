@@ -64,12 +64,14 @@ const SUB_MENU = [
     judul: 'Menjawab Pertanyaan',
     label: 'Kartu berwaktu',
     isi: 'Buka kartu satu per satu dan jawab sebelum waktunya habis. Setiap unit berisi 20 kartu dalam urutan acak.',
+    aksi: 'Pilih unit →',
   },
   {
     ke: '/tantangan/live-coding',
     judul: 'Live Coding',
     label: 'Tulis program sendiri',
-    isi: 'Baca soal cerita, tulis programnya di editor, lalu periksa sendiri dengan uji contoh dan uji tersembunyi. Setiap unit berisi 10 soal.',
+    isi: 'Pilih kartu bernomor, baca soal ceritanya, tulis programnya di editor, lalu periksa sendiri dengan uji contoh dan uji tersembunyi.',
+    aksi: 'Pilih kartu →',
   },
 ];
 
@@ -94,7 +96,7 @@ export function TantanganMenu() {
               <span className="pill pill--quiet" style={{ marginBottom: 14 }}>{m.label}</span>
               <h2 style={{ fontSize: 26, margin: '0 0 8px' }}>{m.judul}</h2>
               <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--muted)', margin: '0 0 16px' }}>{m.isi}</p>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-deep)' }}>Pilih unit →</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-deep)' }}>{m.aksi}</span>
             </Link>
           ))}
         </div>
