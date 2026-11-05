@@ -1093,5 +1093,745 @@ export const SOAL_LIVE_CODING: SoalLiveCoding[] = [
         "output": "Kembalian: 16000"
       }
     ]
+  },
+  {
+    "id": "lc-u2-11",
+    "unit": "U2",
+    "judul": "Selisih Umur Kakak Adik",
+    "cerita": "Raka ingin tahu berapa tahun selisih umurnya dengan adiknya.\n\nProgram membaca umur kakak lalu umur adik (bilangan bulat, masing-masing satu baris; umur kakak selalu lebih besar), lalu mencetak:\n\nSelisih umur: <selisih> tahun",
+    "kodeAwal": "kakak = int(input())\nadik = int(input())\n",
+    "contoh": [
+      {
+        "input": "17\n12",
+        "output": "Selisih umur: 5 tahun"
+      },
+      {
+        "input": "9\n8",
+        "output": "Selisih umur: 1 tahun"
+      }
+    ],
+    "uji": [
+      {
+        "input": "30\n1",
+        "output": "Selisih umur: 29 tahun"
+      },
+      {
+        "input": "15\n5",
+        "output": "Selisih umur: 10 tahun"
+      },
+      {
+        "input": "12\n0",
+        "output": "Selisih umur: 12 tahun"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-12",
+    "unit": "U2",
+    "judul": "Luas dan Keliling Taman",
+    "cerita": "Sekolah membuat taman berbentuk persegi.\n\nProgram membaca panjang sisi taman (bilangan bulat, dalam meter), lalu mencetak dua baris:\n\nLuas: <sisi pangkat 2>\nKeliling: <4 × sisi>",
+    "kodeAwal": "sisi = int(input())\n",
+    "contoh": [
+      {
+        "input": "5",
+        "output": "Luas: 25\nKeliling: 20"
+      },
+      {
+        "input": "12",
+        "output": "Luas: 144\nKeliling: 48"
+      }
+    ],
+    "uji": [
+      {
+        "input": "1",
+        "output": "Luas: 1\nKeliling: 4"
+      },
+      {
+        "input": "7",
+        "output": "Luas: 49\nKeliling: 28"
+      },
+      {
+        "input": "30",
+        "output": "Luas: 900\nKeliling: 120"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-13",
+    "unit": "U2",
+    "judul": "Libur Sekolah",
+    "cerita": "Libur kenaikan kelas tahun ini cukup panjang. Dinda ingin menyatakannya dalam minggu dan hari.\n\nProgram membaca lama libur dalam hari (bilangan bulat), lalu mencetak:\n\n<minggu> minggu <hari> hari",
+    "kodeAwal": "libur = int(input())\n",
+    "contoh": [
+      {
+        "input": "17",
+        "output": "2 minggu 3 hari"
+      },
+      {
+        "input": "14",
+        "output": "2 minggu 0 hari"
+      }
+    ],
+    "uji": [
+      {
+        "input": "3",
+        "output": "0 minggu 3 hari"
+      },
+      {
+        "input": "0",
+        "output": "0 minggu 0 hari"
+      },
+      {
+        "input": "29",
+        "output": "4 minggu 1 hari"
+      },
+      {
+        "input": "100",
+        "output": "14 minggu 2 hari"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-14",
+    "unit": "U2",
+    "judul": "Kelipatan 3 atau 5",
+    "cerita": "Dalam permainan hitung di kelas, murid harus bertepuk tangan bila bilangannya kelipatan 3 atau kelipatan 5.\n\nProgram membaca sebuah bilangan bulat positif, lalu mencetak True bila bilangan itu kelipatan 3 atau kelipatan 5 (atau keduanya), dan False bila bukan.\n\nGunakan % dan or — tanpa if.",
+    "kodeAwal": "n = int(input())\n",
+    "contoh": [
+      {
+        "input": "9",
+        "output": "True"
+      },
+      {
+        "input": "7",
+        "output": "False"
+      },
+      {
+        "input": "10",
+        "output": "True"
+      }
+    ],
+    "uji": [
+      {
+        "input": "15",
+        "output": "True"
+      },
+      {
+        "input": "1",
+        "output": "False"
+      },
+      {
+        "input": "30",
+        "output": "True"
+      },
+      {
+        "input": "22",
+        "output": "False"
+      },
+      {
+        "input": "3",
+        "output": "True"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-15",
+    "unit": "U2",
+    "judul": "Diskon Persen",
+    "cerita": "Toko buku memberi diskon dalam persen. Potongan dihitung dengan harga × persen // 100 (dibulatkan ke bawah).\n\nProgram membaca harga (bilangan bulat) lalu besar diskon dalam persen (bilangan bulat), lalu mencetak dua baris:\n\nPotongan: <potongan>\nBayar: <harga − potongan>",
+    "kodeAwal": "harga = int(input())\npersen = int(input())\n",
+    "contoh": [
+      {
+        "input": "50000\n10",
+        "output": "Potongan: 5000\nBayar: 45000"
+      },
+      {
+        "input": "35000\n25",
+        "output": "Potongan: 8750\nBayar: 26250"
+      }
+    ],
+    "uji": [
+      {
+        "input": "10000\n0",
+        "output": "Potongan: 0\nBayar: 10000"
+      },
+      {
+        "input": "99999\n50",
+        "output": "Potongan: 49999\nBayar: 50000"
+      },
+      {
+        "input": "12345\n15",
+        "output": "Potongan: 1851\nBayar: 10494"
+      },
+      {
+        "input": "80000\n100",
+        "output": "Potongan: 80000\nBayar: 0"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-16",
+    "unit": "U2",
+    "judul": "Poin Klasemen",
+    "cerita": "Dalam liga futsal sekolah, menang bernilai 3 poin, seri 1 poin, dan kalah 0 poin.\n\nProgram membaca jumlah menang, jumlah seri, lalu jumlah kalah (bilangan bulat, masing-masing satu baris), lalu mencetak:\n\nPoin: <total poin>",
+    "kodeAwal": "menang = int(input())\nseri = int(input())\nkalah = int(input())\n",
+    "contoh": [
+      {
+        "input": "4\n2\n1",
+        "output": "Poin: 14"
+      },
+      {
+        "input": "0\n3\n5",
+        "output": "Poin: 3"
+      }
+    ],
+    "uji": [
+      {
+        "input": "0\n0\n0",
+        "output": "Poin: 0"
+      },
+      {
+        "input": "10\n0\n0",
+        "output": "Poin: 30"
+      },
+      {
+        "input": "2\n5\n3",
+        "output": "Poin: 11"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-17",
+    "unit": "U2",
+    "judul": "Ubin Lantai Kelas",
+    "cerita": "Lantai kelas berbentuk persegi akan dipasangi ubin berukuran 50 cm × 50 cm. Setiap 1 meter panjang muat 2 ubin.\n\nProgram membaca panjang sisi lantai dalam meter (bilangan bulat), lalu mencetak:\n\nUbin: <banyak ubin yang dibutuhkan>\n\nPetunjuk: banyak ubin satu baris adalah sisi × 2, dan lantainya persegi.",
+    "kodeAwal": "sisi = int(input())\n",
+    "contoh": [
+      {
+        "input": "8",
+        "output": "Ubin: 256"
+      },
+      {
+        "input": "1",
+        "output": "Ubin: 4"
+      }
+    ],
+    "uji": [
+      {
+        "input": "5",
+        "output": "Ubin: 100"
+      },
+      {
+        "input": "10",
+        "output": "Ubin: 400"
+      },
+      {
+        "input": "3",
+        "output": "Ubin: 36"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-18",
+    "unit": "U2",
+    "judul": "Syarat Beasiswa",
+    "cerita": "Murid mendapat beasiswa bila nilai rata-ratanya minimal 90, ATAU bila ia pernah memenangkan setidaknya 1 lomba.\n\nProgram membaca nilai rata-rata (bilangan bulat) lalu jumlah lomba yang pernah dimenangkan (bilangan bulat), lalu mencetak True bila mendapat beasiswa dan False bila tidak.",
+    "kodeAwal": "nilai = int(input())\nlomba = int(input())\n",
+    "contoh": [
+      {
+        "input": "92\n0",
+        "output": "True"
+      },
+      {
+        "input": "80\n2",
+        "output": "True"
+      },
+      {
+        "input": "85\n0",
+        "output": "False"
+      }
+    ],
+    "uji": [
+      {
+        "input": "90\n0",
+        "output": "True"
+      },
+      {
+        "input": "89\n1",
+        "output": "True"
+      },
+      {
+        "input": "89\n0",
+        "output": "False"
+      },
+      {
+        "input": "100\n5",
+        "output": "True"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-19",
+    "unit": "U2",
+    "judul": "Target Tabungan",
+    "cerita": "Nisa menabung jumlah yang sama setiap hari untuk membeli sepatu.\n\nProgram membaca tabungan per hari, lama menabung dalam hari, lalu harga sepatu (bilangan bulat, masing-masing satu baris). Cetak dua baris:\n\nTotal: <total tabungan>\nCukup: <True bila total minimal sama dengan harga sepatu, False bila kurang>",
+    "kodeAwal": "per_hari = int(input())\nhari = int(input())\nharga = int(input())\n",
+    "contoh": [
+      {
+        "input": "5000\n30\n120000",
+        "output": "Total: 150000\nCukup: True"
+      },
+      {
+        "input": "2000\n10\n50000",
+        "output": "Total: 20000\nCukup: False"
+      }
+    ],
+    "uji": [
+      {
+        "input": "10000\n10\n100000",
+        "output": "Total: 100000\nCukup: True"
+      },
+      {
+        "input": "1000\n99\n100000",
+        "output": "Total: 99000\nCukup: False"
+      },
+      {
+        "input": "0\n5\n0",
+        "output": "Total: 0\nCukup: True"
+      }
+    ]
+  },
+  {
+    "id": "lc-u2-20",
+    "unit": "U2",
+    "judul": "Jam Pulang Sekolah",
+    "cerita": "Sekolah dimulai tepat pada jam tertentu (menit ke-0), dan lama belajar ditulis dalam menit.\n\nProgram membaca jam masuk (bilangan bulat, misalnya 7) lalu lama belajar dalam menit (bilangan bulat), lalu mencetak:\n\nPulang pukul <jam> lewat <menit> menit\n\nAnggap sekolah selalu selesai sebelum tengah malam.",
+    "kodeAwal": "jam_masuk = int(input())\nlama = int(input())\n",
+    "contoh": [
+      {
+        "input": "7\n450",
+        "output": "Pulang pukul 14 lewat 30 menit"
+      },
+      {
+        "input": "13\n120",
+        "output": "Pulang pukul 15 lewat 0 menit"
+      }
+    ],
+    "uji": [
+      {
+        "input": "7\n0",
+        "output": "Pulang pukul 7 lewat 0 menit"
+      },
+      {
+        "input": "6\n59",
+        "output": "Pulang pukul 6 lewat 59 menit"
+      },
+      {
+        "input": "8\n61",
+        "output": "Pulang pukul 9 lewat 1 menit"
+      },
+      {
+        "input": "10\n600",
+        "output": "Pulang pukul 20 lewat 0 menit"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-11",
+    "unit": "U3",
+    "judul": "Wujud Air",
+    "cerita": "Di laboratorium IPA, wujud air ditentukan oleh suhunya:\n• beku — bila suhunya 0 atau kurang\n• cair — bila suhunya di atas 0 tetapi kurang dari 100\n• uap — bila suhunya 100 atau lebih\n\nProgram membaca suhu (bilangan bulat), lalu mencetak beku, cair, atau uap.",
+    "kodeAwal": "suhu = int(input())\n",
+    "contoh": [
+      {
+        "input": "25",
+        "output": "cair"
+      },
+      {
+        "input": "-5",
+        "output": "beku"
+      },
+      {
+        "input": "120",
+        "output": "uap"
+      }
+    ],
+    "uji": [
+      {
+        "input": "0",
+        "output": "beku"
+      },
+      {
+        "input": "1",
+        "output": "cair"
+      },
+      {
+        "input": "99",
+        "output": "cair"
+      },
+      {
+        "input": "100",
+        "output": "uap"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-12",
+    "unit": "U3",
+    "judul": "Boleh Membuat SIM",
+    "cerita": "SIM motor baru boleh dibuat pada umur 17 tahun atau lebih.\n\nProgram membaca umur (bilangan bulat). Bila umurnya 17 atau lebih, cetak:\n\nBoleh membuat SIM\n\nBila belum, cetak berapa tahun lagi yang harus ditunggu:\n\nTunggu <17 − umur> tahun lagi",
+    "kodeAwal": "umur = int(input())\n",
+    "contoh": [
+      {
+        "input": "18",
+        "output": "Boleh membuat SIM"
+      },
+      {
+        "input": "15",
+        "output": "Tunggu 2 tahun lagi"
+      }
+    ],
+    "uji": [
+      {
+        "input": "17",
+        "output": "Boleh membuat SIM"
+      },
+      {
+        "input": "16",
+        "output": "Tunggu 1 tahun lagi"
+      },
+      {
+        "input": "5",
+        "output": "Tunggu 12 tahun lagi"
+      },
+      {
+        "input": "40",
+        "output": "Boleh membuat SIM"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-13",
+    "unit": "U3",
+    "judul": "Pemenang Lomba Lari",
+    "cerita": "Dua pelari bertanding. Yang waktunya lebih kecil adalah pemenangnya.\n\nProgram membaca waktu pelari 1 lalu waktu pelari 2 (bilangan bulat, dalam detik), lalu mencetak:\n• Pelari 1 menang — bila waktu pelari 1 lebih kecil\n• Pelari 2 menang — bila waktu pelari 2 lebih kecil\n• Seri — bila waktunya sama",
+    "kodeAwal": "waktu1 = int(input())\nwaktu2 = int(input())\n",
+    "contoh": [
+      {
+        "input": "12\n14",
+        "output": "Pelari 1 menang"
+      },
+      {
+        "input": "15\n11",
+        "output": "Pelari 2 menang"
+      }
+    ],
+    "uji": [
+      {
+        "input": "13\n13",
+        "output": "Seri"
+      },
+      {
+        "input": "9\n10",
+        "output": "Pelari 1 menang"
+      },
+      {
+        "input": "20\n19",
+        "output": "Pelari 2 menang"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-14",
+    "unit": "U3",
+    "judul": "Status Baterai HP",
+    "cerita": "Aplikasi kelas menampilkan status baterai HP:\n• Lemah — bila baterai 20% atau kurang\n• Sedang — bila baterai 21% sampai 79%\n• Penuh — bila baterai 80% atau lebih\n\nProgram membaca persentase baterai (bilangan bulat 0 sampai 100), lalu mencetak Lemah, Sedang, atau Penuh.",
+    "kodeAwal": "baterai = int(input())\n",
+    "contoh": [
+      {
+        "input": "15",
+        "output": "Lemah"
+      },
+      {
+        "input": "50",
+        "output": "Sedang"
+      },
+      {
+        "input": "95",
+        "output": "Penuh"
+      }
+    ],
+    "uji": [
+      {
+        "input": "20",
+        "output": "Lemah"
+      },
+      {
+        "input": "21",
+        "output": "Sedang"
+      },
+      {
+        "input": "79",
+        "output": "Sedang"
+      },
+      {
+        "input": "80",
+        "output": "Penuh"
+      },
+      {
+        "input": "0",
+        "output": "Lemah"
+      },
+      {
+        "input": "100",
+        "output": "Penuh"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-15",
+    "unit": "U3",
+    "judul": "Hari Sekolah atau Libur",
+    "cerita": "Hari diberi nomor: 1 = Senin, 2 = Selasa, … 5 = Jumat, 6 = Sabtu, 7 = Minggu. Sekolah masuk Senin sampai Jumat.\n\nProgram membaca nomor hari (bilangan bulat), lalu mencetak:\n• Sekolah — untuk nomor 1 sampai 5\n• Libur — untuk nomor 6 atau 7\n• Hari tidak valid — untuk nomor lainnya",
+    "kodeAwal": "hari = int(input())\n",
+    "contoh": [
+      {
+        "input": "3",
+        "output": "Sekolah"
+      },
+      {
+        "input": "7",
+        "output": "Libur"
+      },
+      {
+        "input": "9",
+        "output": "Hari tidak valid"
+      }
+    ],
+    "uji": [
+      {
+        "input": "1",
+        "output": "Sekolah"
+      },
+      {
+        "input": "5",
+        "output": "Sekolah"
+      },
+      {
+        "input": "6",
+        "output": "Libur"
+      },
+      {
+        "input": "0",
+        "output": "Hari tidak valid"
+      },
+      {
+        "input": "-2",
+        "output": "Hari tidak valid"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-16",
+    "unit": "U3",
+    "judul": "Gratis Ongkir",
+    "cerita": "Toko daring menggratiskan ongkos kirim untuk belanja minimal 100000. Belanja di bawah itu dikenai ongkir 15000.\n\nProgram membaca total belanja (bilangan bulat), lalu mencetak dua baris:\n\nOngkir: <ongkos kirim>\nTotal bayar: <belanja + ongkir>",
+    "kodeAwal": "belanja = int(input())\n",
+    "contoh": [
+      {
+        "input": "120000",
+        "output": "Ongkir: 0\nTotal bayar: 120000"
+      },
+      {
+        "input": "40000",
+        "output": "Ongkir: 15000\nTotal bayar: 55000"
+      }
+    ],
+    "uji": [
+      {
+        "input": "100000",
+        "output": "Ongkir: 0\nTotal bayar: 100000"
+      },
+      {
+        "input": "99999",
+        "output": "Ongkir: 15000\nTotal bayar: 114999"
+      },
+      {
+        "input": "0",
+        "output": "Ongkir: 15000\nTotal bayar: 15000"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-17",
+    "unit": "U3",
+    "judul": "Fizz Buzz",
+    "cerita": "Permainan Fizz Buzz di kelas: setiap murid menyebut satu bilangan, tetapi:\n• kelipatan 3 dan 5 sekaligus diganti FizzBuzz\n• kelipatan 3 saja diganti Fizz\n• kelipatan 5 saja diganti Buzz\n• bilangan lain disebut apa adanya\n\nProgram membaca sebuah bilangan bulat positif, lalu mencetak apa yang harus disebut.",
+    "kodeAwal": "n = int(input())\n",
+    "contoh": [
+      {
+        "input": "9",
+        "output": "Fizz"
+      },
+      {
+        "input": "10",
+        "output": "Buzz"
+      },
+      {
+        "input": "15",
+        "output": "FizzBuzz"
+      },
+      {
+        "input": "7",
+        "output": "7"
+      }
+    ],
+    "uji": [
+      {
+        "input": "30",
+        "output": "FizzBuzz"
+      },
+      {
+        "input": "3",
+        "output": "Fizz"
+      },
+      {
+        "input": "5",
+        "output": "Buzz"
+      },
+      {
+        "input": "1",
+        "output": "1"
+      },
+      {
+        "input": "45",
+        "output": "FizzBuzz"
+      },
+      {
+        "input": "22",
+        "output": "22"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-18",
+    "unit": "U3",
+    "judul": "Tuntas atau Remedial",
+    "cerita": "Nilai ujian yang sah adalah 0 sampai 100. Nilai 75 ke atas dinyatakan tuntas.\n\nProgram membaca nilai (bilangan bulat), lalu mencetak:\n• Nilai tidak valid — bila nilainya di bawah 0 atau di atas 100\n• Tuntas — bila nilainya 75 sampai 100\n• Remedial, kurang <75 − nilai> poin — bila nilainya 0 sampai 74",
+    "kodeAwal": "nilai = int(input())\n",
+    "contoh": [
+      {
+        "input": "88",
+        "output": "Tuntas"
+      },
+      {
+        "input": "70",
+        "output": "Remedial, kurang 5 poin"
+      },
+      {
+        "input": "120",
+        "output": "Nilai tidak valid"
+      }
+    ],
+    "uji": [
+      {
+        "input": "75",
+        "output": "Tuntas"
+      },
+      {
+        "input": "74",
+        "output": "Remedial, kurang 1 poin"
+      },
+      {
+        "input": "0",
+        "output": "Remedial, kurang 75 poin"
+      },
+      {
+        "input": "100",
+        "output": "Tuntas"
+      },
+      {
+        "input": "-1",
+        "output": "Nilai tidak valid"
+      },
+      {
+        "input": "101",
+        "output": "Nilai tidak valid"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-19",
+    "unit": "U3",
+    "judul": "Denda Perpustakaan",
+    "cerita": "Perpustakaan sekolah menghitung denda keterlambatan mengembalikan buku:\n• tidak terlambat (0 hari): tidak ada denda\n• terlambat 1 sampai 7 hari: 1000 per hari\n• terlambat lebih dari 7 hari: 7000 untuk 7 hari pertama, ditambah 2000 untuk setiap hari setelahnya\n\nProgram membaca lama keterlambatan dalam hari (bilangan bulat, minimal 0), lalu mencetak:\n\nDenda: <besar denda>",
+    "kodeAwal": "terlambat = int(input())\n",
+    "contoh": [
+      {
+        "input": "3",
+        "output": "Denda: 3000"
+      },
+      {
+        "input": "10",
+        "output": "Denda: 13000"
+      }
+    ],
+    "uji": [
+      {
+        "input": "0",
+        "output": "Denda: 0"
+      },
+      {
+        "input": "1",
+        "output": "Denda: 1000"
+      },
+      {
+        "input": "7",
+        "output": "Denda: 7000"
+      },
+      {
+        "input": "8",
+        "output": "Denda: 9000"
+      },
+      {
+        "input": "30",
+        "output": "Denda: 53000"
+      }
+    ]
+  },
+  {
+    "id": "lc-u3-20",
+    "unit": "U3",
+    "judul": "Segitiga Siku-siku",
+    "cerita": "Sebuah segitiga siku-siku bila kuadrat sisi terpanjang sama dengan jumlah kuadrat dua sisi lainnya (teorema Pythagoras).\n\nProgram membaca tiga sisi segitiga a, b, lalu c (bilangan bulat, masing-masing satu baris). Sisi c selalu yang terpanjang. Cetak siku-siku bila a² + b² = c², dan bukan siku-siku bila tidak.",
+    "kodeAwal": "a = int(input())\nb = int(input())\nc = int(input())\n",
+    "contoh": [
+      {
+        "input": "3\n4\n5",
+        "output": "siku-siku"
+      },
+      {
+        "input": "4\n5\n6",
+        "output": "bukan siku-siku"
+      }
+    ],
+    "uji": [
+      {
+        "input": "6\n8\n10",
+        "output": "siku-siku"
+      },
+      {
+        "input": "5\n12\n13",
+        "output": "siku-siku"
+      },
+      {
+        "input": "2\n2\n3",
+        "output": "bukan siku-siku"
+      },
+      {
+        "input": "1\n1\n1",
+        "output": "bukan siku-siku"
+      }
+    ]
   }
 ];

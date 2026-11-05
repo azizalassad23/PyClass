@@ -215,8 +215,11 @@ function UjianAktif({ keadaanAwal }: { keadaanAwal: KeadaanUjian }) {
     catatJalan(soal.id);
     const kode = jawaban[soal.id] ?? '';
     const hasil: HasilTest[] = [];
+    let macet = '';
     for (const contoh of soal.contoh) {
-      const { keluaran, galat } = await jalankanTest(kode, contoh.input);
+      // Program yang tidak pernah berhenti cukup ditunggu sekali, bukan 10 detik per contoh.
+      const { keluaran, galat } = macet ? { keluaran: '', galat: macet } : await jalankanTest(kode, contoh.input);
+      if (galat.includes('batas 10 detik')) macet = galat;
       hasil.push({
         input: contoh.input,
         harap: contoh.output,
