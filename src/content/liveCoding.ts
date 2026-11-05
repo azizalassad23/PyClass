@@ -27,9 +27,6 @@ export interface SoalLiveCoding {
   uji: ContohUji[];
 }
 
-/** Unit yang sudah punya soal Live Coding. */
-export const UNIT_LIVE_CODING = ["U1","U2","U3"];
-
 export const SOAL_LIVE_CODING: SoalLiveCoding[] = [
   {
     "id": "lc-u1-01",

@@ -3,7 +3,9 @@ import { Link, Navigate } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
 import { GAYA_ANIMASI, Konfeti } from '../components/Konfeti';
 import { KonsolPython } from '../components/KonsolPython';
+import { KotakContoh } from '../components/KotakContoh';
 import { PanelEditor } from '../components/PanelEditor';
+import { StatusPython } from '../components/StatusPython';
 import { SOAL_LIVE_CODING, type SoalLiveCoding } from '../content/liveCoding';
 import { normalisasiKeluaran } from '../lib/format';
 import { acakUrutan } from '../lib/rng';
@@ -58,7 +60,7 @@ export function LiveCoding() {
   const [urutan, setUrutan] = useState(() => acakUrutan(SOAL_LIVE_CODING, Math.random));
   const [simpanan, setSimpanan] = useState<Simpanan>(() => baca(KUNCI, KOSONG));
   const [terbuka, setTerbuka] = useState<SoalLiveCoding | null>(null);
-  const { fase, pesanFase, panaskan } = usePython();
+  const { panaskan } = usePython();
 
   useEffect(() => { panaskan(); }, [panaskan]);
   useEffect(() => { window.scrollTo(0, 0); }, [terbuka]);
@@ -116,18 +118,7 @@ export function LiveCoding() {
           Periksa. Tidak ada batas waktu, dan kartu boleh dibuka lagi sampai lulus.
         </p>
 
-        {fase !== 'siap' && (
-          <p
-            role="status"
-            style={{
-              margin: '0 0 18px', padding: '12px 16px', borderRadius: 'var(--r-sm)', fontSize: 13.5,
-              background: fase === 'gagal' ? 'var(--brand-wash)' : 'var(--surface)', color: 'var(--muted)',
-              border: '1px solid var(--line)',
-            }}
-          >
-            {fase === 'gagal' ? pesanFase : `${pesanFase || 'Menyiapkan Python…'} Kartu tetap bisa dibuka sambil menunggu.`}
-          </p>
-        )}
+        <StatusPython akhiran="Kartu tetap bisa dibuka sambil menunggu." />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 14 }}>
           {urutan.map((s, i) => (
@@ -192,7 +183,7 @@ function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, onKembali }: {
   const [periksa, setPeriksa] = useState<HasilPeriksa | null>(null);
   const [memeriksa, setMemeriksa] = useState(false);
   const [rayakan, setRayakan] = useState(false);
-  const { fase, pesanFase, sedangJalan } = usePython();
+  const { fase, sedangJalan } = usePython();
   const jalankanUji = useRunnerBatch();
   const { keadaan, mulai, balasInput, bersihkan } = useRunner();
 
@@ -214,8 +205,17 @@ function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, onKembali }: {
     siapkanSuara();
     setMemeriksa(true);
     const hasil: HasilPeriksa = { contoh: [], tersembunyi: [] };
-    for (const u of soal.contoh) hasil.contoh.push(await ujiSatu(u));
-    for (const u of soal.uji) hasil.tersembunyi.push(await ujiSatu(u));
+    // Program yang tidak pernah berhenti cukup ditunggu sekali: uji sisanya
+    // langsung dianggap gagal, bukan menunggu 10 detik lagi di setiap uji.
+    let macet = '';
+    const uji = async (u: { input: string; output: string }): Promise<HasilUji> => {
+      if (macet) return { input: u.input, harap: u.output, dapat: '', cocok: false, galat: macet };
+      const h = await ujiSatu(u);
+      if (h.galat.includes('batas 10 detik')) macet = h.galat;
+      return h;
+    };
+    for (const u of soal.contoh) hasil.contoh.push(await uji(u));
+    for (const u of soal.uji) hasil.tersembunyi.push(await uji(u));
     setMemeriksa(false);
     setPeriksa(hasil);
     if ([...hasil.contoh, ...hasil.tersembunyi].every((h) => h.cocok)) {
@@ -246,18 +246,7 @@ function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, onKembali }: {
           {lulus && <span className="pill pill--leaf">✓ Lulus</span>}
         </div>
 
-        {!pythonSiap && (
-          <p
-            role="status"
-            style={{
-              margin: '0 0 16px', padding: '12px 16px', borderRadius: 'var(--r-sm)', fontSize: 13.5,
-              background: fase === 'gagal' ? 'var(--brand-wash)' : 'var(--surface)', color: 'var(--muted)',
-              border: '1px solid var(--line)',
-            }}
-          >
-            {fase === 'gagal' ? pesanFase : `${pesanFase || 'Menyiapkan Python…'} Kode bisa dijalankan setelah Python siap.`}
-          </p>
-        )}
+        <StatusPython akhiran="Kode bisa dijalankan setelah Python siap." />
       </div>
 
       <div className="shell livecoding" style={{ padding: '0 clamp(16px, 3vw, 32px) 56px' }}>
@@ -345,17 +334,6 @@ function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, onKembali }: {
           onTutup={() => setRayakan(false)}
         />
       )}
-    </div>
-  );
-}
-
-function KotakContoh({ label, isi }: { label: string; isi: string }) {
-  return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)', padding: '10px 14px' }}>
-      <div className="eyebrow" style={{ fontSize: 10, marginBottom: 4 }}>{label}</div>
-      <pre style={{ margin: 0, fontSize: 14, whiteSpace: 'pre-wrap', color: 'var(--ink)' }}>
-        {isi === '' ? '(kosong)' : isi}
-      </pre>
     </div>
   );
 }

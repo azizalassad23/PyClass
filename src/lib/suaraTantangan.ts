@@ -105,8 +105,8 @@ export function bunyiSalah(): void {
 }
 
 /** Detak di detik-detik terakhir. */
-export function bunyiDetak(akhir = false): void {
+export function bunyiDetak(): void {
   const ctx = konteks;
   if (!ctx) return;
-  nada(ctx, akhir ? 1320 : 990, ctx.currentTime, 0.07, 'square', 0.12);
+  nada(ctx, 990, ctx.currentTime, 0.07, 'square', 0.12);
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
 import { GAYA_ANIMASI, Konfeti } from '../components/Konfeti';
+import { StatusPython } from '../components/StatusPython';
 import {
   KARTU, UNIT_TANTANGAN, WAKTU_TINGKAT, type KartuTantangan,
 } from '../content/tantangan';
@@ -25,7 +26,7 @@ interface HasilKartu { status: Status; jawaban: string }
  * ganda/tunggal, dan spasi di sekitar koma atau kurung tidak dipersoalkan —
  * yang dinilai adalah pemahaman murid, bukan ketelitian mengetik spasi.
  */
-export function rapikanJawaban(s: string): string {
+function rapikanJawaban(s: string): string {
   let t = s.trim().replace(/\s+/g, ' ').replace(/"/g, "'");
   t = t.replace(/\s*([,:])\s*/g, '$1 ').replace(/([[({])\s+/g, '$1').replace(/\s+([\])}])/g, '$1').trim();
   if (t.length >= 2 && t.startsWith("'") && t.endsWith("'") && !t.slice(1, -1).includes("'")) t = t.slice(1, -1);
@@ -174,7 +175,7 @@ export function TantanganUnit() {
   const kunci = `tantangan:${unitId}`;
   const [hasil, setHasil] = useState<Record<string, HasilKartu>>(() => baca(kunci, {}));
   const [terbuka, setTerbuka] = useState<KartuTantangan | null>(null);
-  const { fase, pesanFase, panaskan } = usePython();
+  const { fase, panaskan } = usePython();
 
   useEffect(() => { panaskan(); }, [panaskan]);
 
@@ -218,18 +219,7 @@ export function TantanganUnit() {
           </div>
         </div>
 
-        {!pythonSiap && (
-          <p
-            role="status"
-            style={{
-              margin: '0 0 18px', padding: '12px 16px', borderRadius: 'var(--r-sm)', fontSize: 13.5,
-              background: fase === 'gagal' ? 'var(--brand-wash)' : 'var(--surface)', color: 'var(--muted)',
-              border: '1px solid var(--line)',
-            }}
-          >
-            {fase === 'gagal' ? pesanFase : `${pesanFase || 'Menyiapkan Python…'} Kartu bisa dibuka setelah Python siap.`}
-          </p>
-        )}
+        <StatusPython akhiran="Kartu bisa dibuka setelah Python siap." />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 14 }}>
           {kartu.map((k, i) => (
@@ -250,6 +240,9 @@ export function TantanganUnit() {
           nomor={kartu.indexOf(terbuka) + 1}
           onSelesai={(h) => simpan(terbuka.id, h)}
           onTutup={() => setTerbuka(null)}
+          // Kartu yang dibatalkan boleh dibuka lagi, tetapi semua posisi diacak
+          // ulang supaya murid tidak bisa langsung menemukannya dengan nomor yang sama.
+          onBatal={() => { setTerbuka(null); setKartu(acak(semua)); }}
         />
       )}
     </div>
@@ -299,11 +292,12 @@ function MukaKartu({ nomor, hasil, bisaDibuka, onBuka }: {
 
 // ── Kartu yang sedang dikerjakan ───────────────────────────────────────────
 
-function KartuTerbuka({ kartu, nomor, onSelesai, onTutup }: {
+function KartuTerbuka({ kartu, nomor, onSelesai, onTutup, onBatal }: {
   kartu: KartuTantangan;
   nomor: number;
   onSelesai: (h: HasilKartu) => void;
   onTutup: () => void;
+  onBatal: () => void;
 }) {
   const durasi = WAKTU_TINGKAT[kartu.tingkat];
   const [mulai] = useState(() => Date.now());
@@ -478,8 +472,8 @@ function KartuTerbuka({ kartu, nomor, onSelesai, onTutup }: {
             <button
               type="button"
               className="btn btn--ghost btn--sm"
-              onClick={() => { selesaiRef.current = true; onTutup(); }}
-              title="Kartu dikembalikan tanpa hasil, bisa dibuka lagi nanti"
+              onClick={() => { selesaiRef.current = true; onBatal(); }}
+              title="Kartu dikembalikan tanpa hasil; semua kartu diacak ulang"
             >
               Batalkan kartu
             </button>
