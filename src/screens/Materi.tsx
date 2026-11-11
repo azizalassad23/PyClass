@@ -6,6 +6,7 @@ import { KonsolPython } from '../components/KonsolPython';
 import { RenderMateri } from '../components/RenderMateri';
 import { Presentasi } from './Presentasi';
 import { HALAMAN, cariHalaman, halamanUnit } from '../content/loader';
+import { UNIT_KUIS_CEPAT } from '../content/tantangan';
 import { UNIT_BY_ID } from '../content/units';
 import { catatDibaca } from '../lib/jejakBelajar';
 import { usePython } from '../python/PythonProvider';
@@ -113,6 +114,18 @@ export function Materi() {
                 >
                   Buka kuis
                 </Link>
+                {UNIT_KUIS_CEPAT.includes(halaman.unit) && (
+                  <Link
+                    to={`/tantangan/pertanyaan/${halaman.unit.toLowerCase()}`}
+                    style={{
+                      display: 'block', textAlign: 'center', marginTop: 8, background: 'var(--leaf-deep)',
+                      color: '#fff', fontFamily: 'var(--display)', fontSize: 13,
+                      padding: '10px 12px', borderRadius: 'var(--r-pill)', textDecoration: 'none',
+                    }}
+                  >
+                    Quick quiz — 5 soal
+                  </Link>
+                )}
               </>
             ) : (
               <div style={{ fontSize: 13, color: 'var(--leaf-ink)', lineHeight: 1.5 }}>
