@@ -7,7 +7,7 @@ import { Ujian } from './screens/Ujian';
 import { Hasil } from './screens/Hasil';
 import { Guru } from './screens/Guru';
 import { TantanganLama, TantanganMenu, TantanganPertanyaan, TantanganUnit } from './screens/Tantangan';
-import { LiveCoding, LiveCodingLama } from './screens/LiveCoding';
+import { KuisCepat, LiveCoding, LiveCodingLama } from './screens/LiveCoding';
 
 /**
  * HashRouter dipilih dengan sengaja: GitHub Pages menyajikan berkas statis dan
@@ -32,6 +32,7 @@ export default function App() {
           <Route path="/tantangan/pertanyaan" element={<TantanganPertanyaan />} />
           <Route path="/tantangan/pertanyaan/:unit" element={<TantanganUnit />} />
           <Route path="/tantangan/live-coding" element={<LiveCoding />} />
+          <Route path="/kuis-cepat/:unit" element={<KuisCepat />} />
           <Route path="/tantangan/live-coding/:unit" element={<LiveCodingLama />} />
           <Route path="/tantangan/:unit" element={<TantanganLama />} />
           <Route path="/guru" element={<Guru />} />

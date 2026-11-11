@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { Header, NavBeranda } from '../components/Header';
 import { GAYA_ANIMASI, Konfeti } from '../components/Konfeti';
 import { KonsolPython } from '../components/KonsolPython';
 import { KotakContoh } from '../components/KotakContoh';
 import { PanelEditor } from '../components/PanelEditor';
 import { StatusPython } from '../components/StatusPython';
-import { SOAL_LIVE_CODING, type SoalLiveCoding } from '../content/liveCoding';
+import { SOAL_KUIS_CEPAT, SOAL_LIVE_CODING, type SoalLiveCoding } from '../content/liveCoding';
+import { halamanUnit } from '../content/loader';
 import { normalisasiKeluaran } from '../lib/format';
 import { acakUrutan } from '../lib/rng';
 import { baca, hapus, tulis } from '../lib/storage';
@@ -52,13 +53,38 @@ export function LiveCodingLama() {
   return <Navigate to="/tantangan/live-coding" replace />;
 }
 
+/** Quick quiz di modul materi: papan Live Coding berisi soal unit itu saja. */
+export function KuisCepat() {
+  const id = (useParams().unit ?? '').toUpperCase();
+  const soal = SOAL_KUIS_CEPAT.filter((s) => s.unit === id);
+  const modul = halamanUnit(id)[0];
+  if (!soal.length || !modul) return <Navigate to="/materi" replace />;
+  return (
+    <LiveCoding
+      key={id}
+      soal={soal}
+      kunci={`kuiscepat:${id}`}
+      judul={`Quick Quiz ${id}`}
+      kembali={{ ke: `/materi/${modul.slug}`, label: `Modul ${id}` }}
+    />
+  );
+}
+
 // ── Papan kartu ────────────────────────────────────────────────────────────
 
-export function LiveCoding() {
+export function LiveCoding({
+  soal = SOAL_LIVE_CODING, kunci = KUNCI, judul = 'Live Coding', kembali = { ke: '/tantangan', label: 'Tantangan Kilat' },
+}: {
+  soal?: SoalLiveCoding[];
+  kunci?: string;
+  judul?: string;
+  kembali?: { ke: string; label: string };
+}) {
+  const jejak = `${kembali.label} · ${judul}`;
   // Urutan diacak setiap kali halaman dibuka dan setiap ganti murid. Kembali
   // dari kartu ke papan tidak mengacak, supaya nomor kartu tetap sama.
-  const [urutan, setUrutan] = useState(() => acakUrutan(SOAL_LIVE_CODING, Math.random));
-  const [simpanan, setSimpanan] = useState<Simpanan>(() => baca(KUNCI, KOSONG));
+  const [urutan, setUrutan] = useState(() => acakUrutan(soal, Math.random));
+  const [simpanan, setSimpanan] = useState<Simpanan>(() => baca(kunci, KOSONG));
   const [terbuka, setTerbuka] = useState<SoalLiveCoding | null>(null);
   const { panaskan } = usePython();
 
@@ -68,16 +94,16 @@ export function LiveCoding() {
   const simpan = useCallback((ubah: (s: Simpanan) => Simpanan) => {
     setSimpanan((lama) => {
       const baru = ubah(lama);
-      tulis(KUNCI, baru);
+      tulis(kunci, baru);
       return baru;
     });
-  }, []);
+  }, [kunci]);
 
   const muridBerikutnya = () => {
     if (!window.confirm('Kosongkan semua kode dan tanda lulus untuk murid berikutnya?')) return;
-    hapus(KUNCI);
+    hapus(kunci);
     setSimpanan(KOSONG);
-    setUrutan(acakUrutan(SOAL_LIVE_CODING, Math.random));
+    setUrutan(acakUrutan(soal, Math.random));
   };
 
   const jumlahLulus = urutan.filter((s) => simpanan.lulus[s.id]).length;
@@ -91,6 +117,7 @@ export function LiveCoding() {
         simpanan={simpanan}
         simpan={simpan}
         semuaLulus={jumlahLulus === urutan.length}
+        jejak={jejak}
         onKembali={() => setTerbuka(null)}
       />
     );
@@ -98,12 +125,12 @@ export function LiveCoding() {
 
   return (
     <div style={{ background: 'var(--cream)', minHeight: '100vh' }}>
-      <Header kanan={<NavBeranda />} jejak="Tantangan Kilat · Live Coding" />
+      <Header kanan={<NavBeranda />} jejak={jejak} />
       <main id="isi" className="shell" style={{ padding: 'clamp(22px, 4vw, 40px) clamp(16px, 3vw, 32px) 64px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
           <div style={{ flex: '1 1 320px' }}>
-            <Link to="/tantangan" style={{ fontSize: 13, color: 'var(--muted-2)', textDecoration: 'none' }}>← Tantangan Kilat</Link>
-            <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', margin: '6px 0 0' }}>Live Coding</h1>
+            <Link to={kembali.ke} style={{ fontSize: 13, color: 'var(--muted-2)', textDecoration: 'none' }}>← {kembali.label}</Link>
+            <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', margin: '6px 0 0' }}>{judul}</h1>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <span className="pill pill--leaf">Lulus {jumlahLulus}</span>
@@ -172,12 +199,13 @@ function MukaKartu({ nomor, lulus, dicoba, onBuka }: {
 
 // ── Kartu yang sedang dikerjakan ───────────────────────────────────────────
 
-function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, onKembali }: {
+function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, jejak, onKembali }: {
   soal: SoalLiveCoding;
   nomor: number;
   simpanan: Simpanan;
   simpan: (ubah: (s: Simpanan) => Simpanan) => void;
   semuaLulus: boolean;
+  jejak: string;
   onKembali: () => void;
 }) {
   const [periksa, setPeriksa] = useState<HasilPeriksa | null>(null);
@@ -236,7 +264,7 @@ function RuangKerja({ soal, nomor, simpanan, simpan, semuaLulus, onKembali }: {
 
   return (
     <div style={{ background: 'var(--cream)', minHeight: '100vh' }}>
-      <Header kanan={<NavBeranda />} jejak="Tantangan Kilat · Live Coding" />
+      <Header kanan={<NavBeranda />} jejak={jejak} />
       <style>{GAYA_ANIMASI}</style>
 
       <div className="shell" style={{ padding: 'clamp(18px, 3vw, 28px) clamp(16px, 3vw, 32px) 0' }}>

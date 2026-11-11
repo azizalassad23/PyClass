@@ -38,10 +38,6 @@ export const WAKTU_TINGKAT: Record<TingkatKartu, number> = { mudah: 60, sedang: 
 
 /** Unit yang sudah punya kartu. Unit lain menyusul dengan format yang sama. */
 export const UNIT_TANTANGAN = ['U1', 'U2', 'U3'];
-
-/** Unit yang punya quick quiz (5 kartu) di modul materinya, terpisah dari menu Tantangan. */
-export const UNIT_KUIS_CEPAT = ['U4'];
-
 export const KARTU: KartuTantangan[] = [
   { id: 'tk-u1-01', unit: 'U1', tingkat: 'mudah', jenis: 'keluaran', kode: 'a = 7\nb = 3\nprint(a + b)', terima: ['10'] },
   { id: 'tk-u1-02', unit: 'U1', tingkat: 'mudah', jenis: 'isian', tanya: 'Apa tipe data dari nilai 3.14?', terima: ['float'] },
@@ -103,9 +99,4 @@ export const KARTU: KartuTantangan[] = [
   { id: 'tk-u3-18', unit: 'U3', tingkat: 'mudah', jenis: 'lengkapi', kode: 'skor = 50\nif skor > 60:\n    print("Lolos")\n___:\n    print("Gagal")', terima: ['else'], target: 'Gagal' },
   { id: 'tk-u3-19', unit: 'U3', tingkat: 'sedang', jenis: 'keluaran', kode: 'a = 3\nb = 3\nif a > b:\n    print("A")\nelif a == b:\n    print("Seri")\nelse:\n    print("B")', terima: ['Seri'] },
   { id: 'tk-u3-20', unit: 'U3', tingkat: 'sulit', jenis: 'lengkapi', kode: 'x = 7\nif x > 5 ___ x % 2 == 0:\n    print("Ya")\nelse:\n    print("Tidak")', terima: ['and'], target: 'Tidak' },
-  { id: 'tk-u4-01', unit: 'U4', tingkat: 'mudah', jenis: 'keluaran', kode: 'total = 0\nfor i in range(1, 5):\n    total = total + i\nprint(total)', terima: ['10'] },
-  { id: 'tk-u4-02', unit: 'U4', tingkat: 'mudah', jenis: 'lengkapi', kode: 'for i in ___(3):\n    print("Hai", end=" ")', terima: ['range'], target: 'Hai Hai Hai' },
-  { id: 'tk-u4-03', unit: 'U4', tingkat: 'mudah', jenis: 'keluaran', kode: 'n = 3\nwhile n > 0:\n    n = n - 1\nprint(n)', terima: ['0'] },
-  { id: 'tk-u4-04', unit: 'U4', tingkat: 'sedang', jenis: 'keluaran', kode: 'for i in range(1, 10, 3):\n    print(i, end=" ")', terima: ['1 4 7'] },
-  { id: 'tk-u4-05', unit: 'U4', tingkat: 'sedang', jenis: 'lengkapi', kode: 'for i in range(1, 11):\n    if i == 4:\n        ___\n    print(i, end=" ")', terima: ['break'], target: '1 2 3' },
 ];

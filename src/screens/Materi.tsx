@@ -6,7 +6,7 @@ import { KonsolPython } from '../components/KonsolPython';
 import { RenderMateri } from '../components/RenderMateri';
 import { Presentasi } from './Presentasi';
 import { HALAMAN, cariHalaman, halamanUnit } from '../content/loader';
-import { UNIT_KUIS_CEPAT } from '../content/tantangan';
+import { SOAL_KUIS_CEPAT } from '../content/liveCoding';
 import { UNIT_BY_ID } from '../content/units';
 import { catatDibaca } from '../lib/jejakBelajar';
 import { usePython } from '../python/PythonProvider';
@@ -114,9 +114,9 @@ export function Materi() {
                 >
                   Buka kuis
                 </Link>
-                {UNIT_KUIS_CEPAT.includes(halaman.unit) && (
+                {SOAL_KUIS_CEPAT.some((s) => s.unit === halaman.unit) && (
                   <Link
-                    to={`/tantangan/pertanyaan/${halaman.unit.toLowerCase()}`}
+                    to={`/kuis-cepat/${halaman.unit.toLowerCase()}`}
                     style={{
                       display: 'block', textAlign: 'center', marginTop: 8, background: 'var(--leaf-deep)',
                       color: '#fff', fontFamily: 'var(--display)', fontSize: 13,

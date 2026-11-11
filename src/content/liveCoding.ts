@@ -1835,3 +1835,166 @@ export const SOAL_LIVE_CODING: SoalLiveCoding[] = [
     ]
   }
 ];
+
+/** Quick quiz di modul materi (tombol di bawah "Buka kuis"), terpisah dari papan Live Coding. */
+export const SOAL_KUIS_CEPAT: SoalLiveCoding[] = [
+  {
+    "id": "kc-u4-01",
+    "unit": "U4",
+    "judul": "Hitung Mundur Roket",
+    "cerita": "Klub sains meluncurkan roket air. Sebelum meluncur, semua menghitung mundur.\n\nProgram membaca sebuah bilangan bulat n (n ≥ 1), lalu mencetak n, n − 1, … sampai 1, satu bilangan per baris. Setelah itu cetak:\n\nMeluncur!",
+    "kodeAwal": "n = int(input())\n",
+    "contoh": [
+      {
+        "input": "3",
+        "output": "3\n2\n1\nMeluncur!"
+      },
+      {
+        "input": "1",
+        "output": "1\nMeluncur!"
+      }
+    ],
+    "uji": [
+      {
+        "input": "5",
+        "output": "5\n4\n3\n2\n1\nMeluncur!"
+      },
+      {
+        "input": "2",
+        "output": "2\n1\nMeluncur!"
+      },
+      {
+        "input": "10",
+        "output": "10\n9\n8\n7\n6\n5\n4\n3\n2\n1\nMeluncur!"
+      }
+    ]
+  },
+  {
+    "id": "kc-u4-02",
+    "unit": "U4",
+    "judul": "Kelipatan Lima",
+    "cerita": "Dalam permainan hitung, murid hanya boleh menyebut kelipatan 5.\n\nProgram membaca sebuah bilangan bulat n (n ≥ 5), lalu mencetak semua kelipatan 5 mulai dari 5 sampai n (n termasuk bila n kelipatan 5), satu bilangan per baris.",
+    "kodeAwal": "n = int(input())\n",
+    "contoh": [
+      {
+        "input": "20",
+        "output": "5\n10\n15\n20"
+      },
+      {
+        "input": "12",
+        "output": "5\n10"
+      }
+    ],
+    "uji": [
+      {
+        "input": "5",
+        "output": "5"
+      },
+      {
+        "input": "9",
+        "output": "5"
+      },
+      {
+        "input": "35",
+        "output": "5\n10\n15\n20\n25\n30\n35"
+      }
+    ]
+  },
+  {
+    "id": "kc-u4-03",
+    "unit": "U4",
+    "judul": "Total Belanja Koperasi",
+    "cerita": "Kasir koperasi mencatat harga setiap barang yang dibeli satu per satu.\n\nProgram membaca banyak barang n pada baris pertama, lalu n baris berikutnya masing-masing berisi harga satu barang (bilangan bulat). Cetak:\n\nTotal: <jumlah semua harga>",
+    "kodeAwal": "n = int(input())\n",
+    "contoh": [
+      {
+        "input": "3\n2000\n3500\n1500",
+        "output": "Total: 7000"
+      },
+      {
+        "input": "1\n12000",
+        "output": "Total: 12000"
+      }
+    ],
+    "uji": [
+      {
+        "input": "4\n1000\n1000\n1000\n1000",
+        "output": "Total: 4000"
+      },
+      {
+        "input": "2\n0\n5000",
+        "output": "Total: 5000"
+      },
+      {
+        "input": "5\n2500\n7000\n1500\n3000\n500",
+        "output": "Total: 14500"
+      }
+    ]
+  },
+  {
+    "id": "kc-u4-04",
+    "unit": "U4",
+    "judul": "Tebak Angka",
+    "cerita": "Komputer menyimpan angka rahasia 7. Murid menebak berkali-kali sampai benar.\n\nProgram terus membaca tebakan (bilangan bulat, satu per baris). Untuk setiap tebakan:\n• cetak Terlalu kecil — bila tebakan lebih kecil dari 7\n• cetak Terlalu besar — bila tebakan lebih besar dari 7\n• bila tebakan sama dengan 7, cetak Benar! Tebakan ke-<urutan tebakan> lalu berhenti",
+    "kodeAwal": "rahasia = 7\n",
+    "contoh": [
+      {
+        "input": "3\n9\n7",
+        "output": "Terlalu kecil\nTerlalu besar\nBenar! Tebakan ke-3"
+      },
+      {
+        "input": "7",
+        "output": "Benar! Tebakan ke-1"
+      }
+    ],
+    "uji": [
+      {
+        "input": "1\n2\n3\n7",
+        "output": "Terlalu kecil\nTerlalu kecil\nTerlalu kecil\nBenar! Tebakan ke-4"
+      },
+      {
+        "input": "10\n8\n7",
+        "output": "Terlalu besar\nTerlalu besar\nBenar! Tebakan ke-3"
+      },
+      {
+        "input": "6\n8\n7",
+        "output": "Terlalu kecil\nTerlalu besar\nBenar! Tebakan ke-3"
+      }
+    ]
+  },
+  {
+    "id": "kc-u4-05",
+    "unit": "U4",
+    "judul": "Banyak Digit",
+    "cerita": "Program membaca sebuah bilangan bulat positif n (n ≥ 1), lalu mencetak banyak digitnya:\n\nDigit: <banyak digit>\n\nGunakan while: bagi n dengan 10 (pakai //) berulang-ulang sampai habis, dan hitung berapa kali pembagian dilakukan.",
+    "kodeAwal": "n = int(input())\n",
+    "contoh": [
+      {
+        "input": "2026",
+        "output": "Digit: 4"
+      },
+      {
+        "input": "7",
+        "output": "Digit: 1"
+      }
+    ],
+    "uji": [
+      {
+        "input": "10",
+        "output": "Digit: 2"
+      },
+      {
+        "input": "99",
+        "output": "Digit: 2"
+      },
+      {
+        "input": "100000",
+        "output": "Digit: 6"
+      },
+      {
+        "input": "1",
+        "output": "Digit: 1"
+      }
+    ]
+  }
+];
